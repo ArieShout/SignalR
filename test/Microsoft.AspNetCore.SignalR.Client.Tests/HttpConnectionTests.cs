@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Threading.Channels;
 using Microsoft.AspNetCore.Client.Tests;
 using Microsoft.AspNetCore.SignalR.Tests.Common;
+using Microsoft.AspNetCore.Sockets.Client.Http;
 using Microsoft.AspNetCore.Sockets.Features;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -58,7 +59,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                         : ResponseUtils.CreateResponse(HttpStatusCode.OK);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             try
             {
                 await connection.StartAsync();
@@ -87,7 +89,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                         : ResponseUtils.CreateResponse(HttpStatusCode.OK);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
 
             await connection.StartAsync();
             await connection.DisposeAsync();
@@ -139,7 +142,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
 
             var transport = new Mock<ITransport>();
             transport.Setup(t => t.StopAsync()).Returns(async () => { await releaseDisposeTcs.Task; });
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(transport.Object), loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(transport.Object), loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
 
             var startTask = connection.StartAsync();
             await allowDisposeTcs.Task;
@@ -178,7 +182,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                         : ResponseUtils.CreateResponse(HttpStatusCode.OK);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
 
             await connection.StartAsync();
             await connection.DisposeAsync();
@@ -202,7 +207,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                         : ResponseUtils.CreateResponse(HttpStatusCode.OK);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
 
 
             await connection.StartAsync().OrTimeout();
@@ -228,7 +234,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                             : ResponseUtils.CreateResponse(HttpStatusCode.OK);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
 
             try
             {
@@ -274,7 +281,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                 });
             mockTransport.SetupGet(t => t.Mode).Returns(TransferMode.Text);
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(mockTransport.Object), loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(mockTransport.Object), loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
 
             var onReceivedInvoked = false;
             connection.OnReceived( _ =>
@@ -321,7 +329,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
             var callbackInvokedTcs = new TaskCompletionSource<object>();
             var closedTcs = new TaskCompletionSource<object>();
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(mockTransport.Object), loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(mockTransport.Object), loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
 
             connection.OnReceived(_ =>
                 {
@@ -376,7 +385,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
 
             var blockReceiveCallbackTcs = new TaskCompletionSource<object>();
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(mockTransport.Object), loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(mockTransport.Object), loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             connection.OnReceived(_ => blockReceiveCallbackTcs.Task);
 
             await connection.StartAsync();
@@ -420,7 +430,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
 
             var callbackInvokedTcs = new TaskCompletionSource<object>();
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(mockTransport.Object), loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(mockTransport.Object), loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             connection.OnReceived( _ =>
                 {
                     throw new OperationCanceledException();
@@ -461,8 +472,9 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
 
             using (var httpClient = new HttpClient(mockHttpHandler.Object))
             {
-                var longPollingTransport = new LongPollingTransport(httpClient, new LoggerFactory());
-                var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(longPollingTransport), loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+                var longPollingTransport = new LongPollingTransport(httpClient, null, new LoggerFactory());
+                var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(longPollingTransport), loggerFactory: null,
+                    httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
 
                 try
                 {
@@ -501,7 +513,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                         : ResponseUtils.CreateResponse(HttpStatusCode.OK);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             try
             {
                 await connection.StartAsync();
@@ -547,7 +560,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                         : ResponseUtils.CreateResponse(HttpStatusCode.OK, content);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
 
             await connection.StartAsync();
             await connection.DisposeAsync();
@@ -575,7 +589,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                             : ResponseUtils.CreateResponse(HttpStatusCode.OK);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             await connection.StartAsync();
 
             var exception = await Assert.ThrowsAsync<HttpRequestException>(
@@ -606,7 +621,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                         : ResponseUtils.CreateResponse(HttpStatusCode.OK, content);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             try
             {
                 var receiveTcs = new TaskCompletionSource<string>();
@@ -661,7 +677,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                         : ResponseUtils.CreateResponse(HttpStatusCode.OK, content);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             try
             {
                 var receiveTcs = new TaskCompletionSource<string>();
@@ -724,7 +741,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                         : ResponseUtils.CreateResponse(HttpStatusCode.OK, content);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             try
             {
                 var receiveTcs = new TaskCompletionSource<string>();
@@ -782,7 +800,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                             : ResponseUtils.CreateResponse(HttpStatusCode.OK);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             try
             {
 
@@ -815,7 +834,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                     return ResponseUtils.CreateResponse(HttpStatusCode.OK, negotiatePayload);
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             var exception = await Assert.ThrowsAsync<FormatException>(
                 () => connection.StartAsync());
 
@@ -835,7 +855,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                         ResponseUtils.CreateNegotiationResponse(connectionId: null));
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             var exception = await Assert.ThrowsAsync<FormatException>(
                 () => connection.StartAsync());
 
@@ -855,7 +876,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                         ResponseUtils.CreateNegotiationResponse(transportTypes: null));
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             var exception = await Assert.ThrowsAsync<FormatException>(
                 () => connection.StartAsync());
 
@@ -877,7 +899,8 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
                         ResponseUtils.CreateNegotiationResponse(transportTypes: serverTransports));
                 });
 
-            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+            var connection = new HttpConnection(new Uri("http://fakeuri.org/"), TransportType.LongPolling, loggerFactory: null,
+                httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
             var exception = await Assert.ThrowsAsync<InvalidOperationException>(
                 () => connection.StartAsync());
 
@@ -915,7 +938,7 @@ namespace Microsoft.AspNetCore.Sockets.Client.Tests
             mockTransport.SetupGet(t => t.Mode).Returns(TransferMode.Binary);
 
             var connection = new HttpConnection(new Uri("http://fakeuri.org/"), new TestTransportFactory(mockTransport.Object),
-                loggerFactory: null, httpMessageHandler: mockHttpHandler.Object);
+                loggerFactory: null, httpOptions: new HttpOptions { HttpMessageHandler = mockHttpHandler.Object });
 
             await connection.StartAsync().OrTimeout();
             var transferModeFeature = connection.Features.Get<ITransferModeFeature>();
