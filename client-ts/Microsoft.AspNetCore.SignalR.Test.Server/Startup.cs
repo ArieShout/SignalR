@@ -29,14 +29,7 @@ namespace Microsoft.AspNetCore.SignalR.Test.Server
                 options.JsonSerializerSettings.ContractResolver = new DefaultContractResolver();
             });
 
-            services.AddAuthorization(options =>
-            {
-                options.AddPolicy(JwtBearerDefaults.AuthenticationScheme, policy =>
-                {
-                    policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
-                    policy.RequireClaim(ClaimTypes.NameIdentifier);
-                });
-            });
+            services.AddAuthorization();
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
@@ -81,7 +74,7 @@ namespace Microsoft.AspNetCore.SignalR.Test.Server
             app.UseSignalR(options => options.MapHub<UncreatableHub>("uncreatable"));
             app.UseSignalR(options => options.MapHub<HubWithAuthorization>("authorizedhub"));
 
-            app.Run(async (context) =>
+            app.Use(next => async (context) =>
             {
                 if (context.Request.Path.StartsWithSegments("/generateJwtToken"))
                 {

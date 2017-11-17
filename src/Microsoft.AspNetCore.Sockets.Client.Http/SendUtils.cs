@@ -121,7 +121,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
 
             if (httpOptions?.JwtBearerTokenFactory != null)
             {
-                request.Headers.Add("Authorization", $"Bearer {httpOptions?.JwtBearerTokenFactory()}");
+                request.Headers.Add("Authorization", $"Bearer {httpOptions.JwtBearerTokenFactory()}");
             }
         }
     }

@@ -43,9 +43,10 @@ namespace Microsoft.AspNetCore.Sockets.Client
                     _webSocket.Options.SetRequestHeader(header.Key, header.Value);
                 }
             }
+
             if (httpOptions?.JwtBearerTokenFactory != null)
             {
-                _webSocket.Options.SetRequestHeader("Authorization", $"Bearer {httpOptions?.JwtBearerTokenFactory()}");
+                _webSocket.Options.SetRequestHeader("Authorization", $"Bearer {httpOptions.JwtBearerTokenFactory()}");
             }
 
             _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<WebSocketsTransport>();
