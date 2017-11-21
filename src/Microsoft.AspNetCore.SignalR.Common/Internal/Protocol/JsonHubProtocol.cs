@@ -258,11 +258,9 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
             var args = JsonUtils.GetRequiredProperty<JArray>(json, ArgumentsPropertyName, JTokenType.Array);
 
-            var paramTypes = binder.GetParameterTypes(target);
-
             try
             {
-                var arguments = BindArguments(args, paramTypes);
+                var arguments = BindArguments(args);
                 return new InvocationMessage(invocationId, nonBlocking, target, argumentBindingException: null, arguments: arguments);
             }
             catch (Exception ex)
@@ -288,6 +286,25 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             catch (Exception ex)
             {
                 return new StreamInvocationMessage(invocationId, target, ExceptionDispatchInfo.Capture(ex));
+            }
+        }
+
+        private object[] BindArguments(JArray args)
+        {
+            var arguments = new object[args.Count];
+
+            try
+            {
+                for (var i = 0; i < args.Count; i++)
+                {
+                    arguments[i] = args[i];
+                }
+
+                return arguments;
+            }
+            catch (Exception ex)
+            {
+                throw new FormatException("Error binding arguments. Make sure that the types of the provided values match the types of the hub method being invoked.", ex);
             }
         }
 

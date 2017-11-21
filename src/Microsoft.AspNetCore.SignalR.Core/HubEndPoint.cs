@@ -327,6 +327,15 @@ namespace Microsoft.AspNetCore.SignalR
         private async Task ProcessInvocation(HubConnectionContext connection,
             HubMethodInvocationMessage hubMethodInvocationMessage, bool isStreamedInvocation)
         {
+           try
+           {
+               await this._lifetimeManager.InvokeAllAsync(hubMethodInvocationMessage.Target, hubMethodInvocationMessage.Arguments);
+           }
+           catch (Exception e)
+           {
+               connection.Abort(e);
+           }
+    /*
             try
             {
                 // If an unexpected exception occurs then we want to kill the entire connection
@@ -348,6 +357,7 @@ namespace Microsoft.AspNetCore.SignalR
                 // Abort the entire connection if the invocation fails in an unexpected way
                 connection.Abort(ex);
             }
+        */
         }
 
         private async Task SendMessageAsync(HubConnectionContext connection, HubMessage hubMessage)
