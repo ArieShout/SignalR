@@ -13,26 +13,13 @@ namespace Microsoft.AspNetCore.Builder
     {
         public static IApplicationBuilder UseSignalRServiceServer(this IApplicationBuilder app)
         {
-            app.UseSockets2(routes =>
+            app.UseSockets(routes =>
             {
                 var hubRouteBuilder = new HubRouteBuilder(routes);
-                hubRouteBuilder.MapHub<ClientHub>("client");
-                hubRouteBuilder.MapHub<ServerHub>("server");
+                hubRouteBuilder.MapHub<ClientHub>("client/{hubName}");
+                hubRouteBuilder.MapHub<ServerHub>("server/{hubName}");
             });
 
-            return app;
-        }
-
-        public static IApplicationBuilder UseSockets2(this IApplicationBuilder app, Action<SocketRouteBuilder2> callback)
-        {
-            var dispatcher = app.ApplicationServices.GetRequiredService<HttpConnectionDispatcher>();
-
-            var routes = new RouteBuilder(app);
-
-            callback(new SocketRouteBuilder2(routes, dispatcher));
-
-            app.UseWebSockets();
-            app.UseRouter(routes.Build());
             return app;
         }
     }
