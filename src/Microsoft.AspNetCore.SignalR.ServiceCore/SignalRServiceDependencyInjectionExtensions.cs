@@ -44,7 +44,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton(typeof(IHubProtocolResolver), typeof(DefaultHubProtocolResolver));
             services.AddSingleton(typeof(IHubContext<>), typeof(HubContext<>));
             services.AddSingleton(typeof(IHubContext<,>), typeof(HubContext<,>));
-            services.AddSingleton(typeof(HubEndPoint<>), typeof(HubEndPoint<>));
+            services.AddSingleton(typeof(NewHubEndPoint<>), typeof(NewHubEndPoint<>));
             services.AddSingleton(typeof(IUserIdProvider), typeof(DefaultUserIdProvider));
             services.AddScoped(typeof(IHubActivator<>), typeof(DefaultHubActivator<>));
 

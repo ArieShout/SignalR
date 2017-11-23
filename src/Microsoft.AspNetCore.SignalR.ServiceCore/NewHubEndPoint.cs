@@ -26,7 +26,7 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.SignalR
 {
-    public class NewHubEndPoint<THub> : HubEndPoint<THub> where THub : Hub
+    public class NewHubEndPoint<THub> : HubEndPoint<THub>, IInvocationBinder where THub : Hub
     {
         private static readonly Base64Encoder Base64Encoder = new Base64Encoder();
         private static readonly PassThroughEncoder PassThroughEncoder = new PassThroughEncoder();
@@ -68,7 +68,7 @@ namespace Microsoft.AspNetCore.SignalR
             // all the relevant state for a SignalR Hub connection.
             connection.Features.Set<IHubFeature>(new HubFeature());
 
-            var connectionContext = new HubConnectionContext(output, connection);
+            var connectionContext = new NewHubConnectionContext(output, connection);
 
             if (!await ProcessNegotiate(connectionContext))
             {
@@ -124,7 +124,7 @@ namespace Microsoft.AspNetCore.SignalR
             }
         }
 
-        private async Task<bool> ProcessNegotiate(HubConnectionContext connection)
+        private async Task<bool> ProcessNegotiate(NewHubConnectionContext connection)
         {
             try
             {
@@ -172,7 +172,7 @@ namespace Microsoft.AspNetCore.SignalR
             return false;
         }
 
-        private async Task RunHubAsync(HubConnectionContext connection)
+        private async Task RunHubAsync(NewHubConnectionContext connection)
         {
             await HubOnConnectedAsync(connection);
 
@@ -190,7 +190,7 @@ namespace Microsoft.AspNetCore.SignalR
             await HubOnDisconnectedAsync(connection, null);
         }
 
-        private async Task HubOnConnectedAsync(HubConnectionContext connection)
+        private async Task HubOnConnectedAsync(NewHubConnectionContext connection)
         {
             try
             {
@@ -216,7 +216,7 @@ namespace Microsoft.AspNetCore.SignalR
             }
         }
 
-        private async Task HubOnDisconnectedAsync(HubConnectionContext connection, Exception exception)
+        private async Task HubOnDisconnectedAsync(NewHubConnectionContext connection, Exception exception)
         {
             try
             {
@@ -255,7 +255,7 @@ namespace Microsoft.AspNetCore.SignalR
             }
         }
 
-        private async Task DispatchMessagesAsync(HubConnectionContext connection)
+        private async Task DispatchMessagesAsync(NewHubConnectionContext connection)
         {
             // Since we dispatch multiple hub invocations in parallel, we need a way to communicate failure back to the main processing loop.
             // This is done by aborting the connection.
@@ -324,7 +324,7 @@ namespace Microsoft.AspNetCore.SignalR
             }
         }
 
-        private async Task ProcessInvocation(HubConnectionContext connection,
+        private async Task ProcessInvocation(NewHubConnectionContext connection,
             HubMethodInvocationMessage hubMethodInvocationMessage, bool isStreamedInvocation)
         {
             try
@@ -350,7 +350,7 @@ namespace Microsoft.AspNetCore.SignalR
             }
         }
 
-        private async Task SendMessageAsync(HubConnectionContext connection, HubMessage hubMessage)
+        private async Task SendMessageAsync(NewHubConnectionContext connection, HubMessage hubMessage)
         {
             while (await connection.Output.WaitToWriteAsync())
             {
@@ -365,7 +365,7 @@ namespace Microsoft.AspNetCore.SignalR
             throw new OperationCanceledException("Outbound channel was closed while trying to write hub message");
         }
 
-        private async Task Invoke(HubMethodDescriptor descriptor, HubConnectionContext connection,
+        private async Task Invoke(HubMethodDescriptor descriptor, NewHubConnectionContext connection,
             HubMethodInvocationMessage hubMethodInvocationMessage, bool isStreamedInvocation)
         {
             var methodExecutor = descriptor.MethodExecutor;
@@ -446,7 +446,7 @@ namespace Microsoft.AspNetCore.SignalR
         }
 
         private async Task SendInvocationError(HubMethodInvocationMessage hubMethodInvocationMessage,
-            HubConnectionContext connection, string errorMessage)
+            NewHubConnectionContext connection, string errorMessage)
         {
             if (hubMethodInvocationMessage.NonBlocking)
             {
@@ -456,7 +456,7 @@ namespace Microsoft.AspNetCore.SignalR
             await SendMessageAsync(connection, CompletionMessage.WithError(hubMethodInvocationMessage.InvocationId, errorMessage));
         }
 
-        private void InitializeHub(THub hub, HubConnectionContext connection)
+        private void InitializeHub(THub hub, NewHubConnectionContext connection)
         {
             hub.Clients = _hubContext.Clients;
             hub.Context = new HubCallerContext(connection);
@@ -478,7 +478,7 @@ namespace Microsoft.AspNetCore.SignalR
             }
         }
 
-        private async Task StreamResultsAsync(string invocationId, HubConnectionContext connection, IAsyncEnumerator<object> enumerator)
+        private async Task StreamResultsAsync(string invocationId, NewHubConnectionContext connection, IAsyncEnumerator<object> enumerator)
         {
             string error = null;
 
@@ -511,7 +511,7 @@ namespace Microsoft.AspNetCore.SignalR
         }
 
         private async Task<bool> ValidateInvocationMode(Type resultType, bool isStreamedInvocation,
-            HubMethodInvocationMessage hubMethodInvocationMessage, HubConnectionContext connection)
+            HubMethodInvocationMessage hubMethodInvocationMessage, NewHubConnectionContext connection)
         {
             var isStreamedResult = IsStreamed(resultType);
             if (isStreamedResult && !isStreamedInvocation)
@@ -557,7 +557,7 @@ namespace Microsoft.AspNetCore.SignalR
             return false;
         }
 
-        private IAsyncEnumerator<object> GetStreamingEnumerator(HubConnectionContext connection, string invocationId, ObjectMethodExecutor methodExecutor, object result, Type resultType)
+        private IAsyncEnumerator<object> GetStreamingEnumerator(NewHubConnectionContext connection, string invocationId, ObjectMethodExecutor methodExecutor, object result, Type resultType)
         {
             if (result != null)
             {

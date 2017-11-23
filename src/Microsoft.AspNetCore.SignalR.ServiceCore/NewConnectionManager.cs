@@ -18,7 +18,7 @@ namespace Microsoft.AspNetCore.Sockets
 {
     public class NewConnectionManager
     {
-        private readonly ConcurrentDictionary<string, DefaultConnectionContext> _connections = new ConcurrentDictionary<string, DefaultConnectionContext>();
+        private readonly ConcurrentDictionary<string, NewDefaultConnectionContext> _connections = new ConcurrentDictionary<string, NewDefaultConnectionContext>();
         private Timer _timer;
         private readonly ILogger<NewConnectionManager> _logger;
         private object _executionLock = new object();
@@ -48,12 +48,12 @@ namespace Microsoft.AspNetCore.Sockets
             }
         }
 
-        public bool TryGetConnection(string id, out DefaultConnectionContext connection)
+        public bool TryGetConnection(string id, out NewDefaultConnectionContext connection)
         {
             return _connections.TryGetValue(id, out connection);
         }
 
-        public DefaultConnectionContext CreateConnection()
+        public NewDefaultConnectionContext CreateConnection()
         {
             var id = MakeNewConnectionId();
 
@@ -66,7 +66,7 @@ namespace Microsoft.AspNetCore.Sockets
             var transportSide = ChannelConnection.Create<byte[]>(applicationToTransport, transportToApplication);
             var applicationSide = ChannelConnection.Create<byte[]>(transportToApplication, applicationToTransport);
 
-            var connection = new DefaultConnectionContext(id, applicationSide, transportSide);
+            var connection = new NewDefaultConnectionContext(id, applicationSide, transportSide);
             connection.ConnectionTimer = connectionTimer;
 
             _connections.TryAdd(id, connection);
@@ -118,7 +118,7 @@ namespace Microsoft.AspNetCore.Sockets
                 // Scan the registered connections looking for ones that have timed out
                 foreach (var c in _connections)
                 {
-                    var status = DefaultConnectionContext.ConnectionStatus.Inactive;
+                    var status = NewDefaultConnectionContext.ConnectionStatus.Inactive;
                     var lastSeenUtc = DateTimeOffset.UtcNow;
 
                     try
@@ -136,7 +136,7 @@ namespace Microsoft.AspNetCore.Sockets
                     }
 
                     // Once the decision has been made to dispose we don't check the status again
-                    if (status == DefaultConnectionContext.ConnectionStatus.Inactive && (DateTimeOffset.UtcNow - lastSeenUtc).TotalSeconds > 5)
+                    if (status == NewDefaultConnectionContext.ConnectionStatus.Inactive && (DateTimeOffset.UtcNow - lastSeenUtc).TotalSeconds > 5)
                     {
                         _logger.ConnectionTimedOut(c.Value.ConnectionId);
                         SocketEventSource.Log.ConnectionTimedOut(c.Value.ConnectionId);
@@ -179,7 +179,7 @@ namespace Microsoft.AspNetCore.Sockets
             }
         }
 
-        public async Task DisposeAndRemoveAsync(DefaultConnectionContext connection)
+        public async Task DisposeAndRemoveAsync(NewDefaultConnectionContext connection)
         {
             try
             {
