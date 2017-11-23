@@ -16,7 +16,7 @@ using ChatSample.Services;
 
 namespace ChatSample.Controllers
 {
-    [Authorize]
+    //[Authorize]
     public class ManageController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;

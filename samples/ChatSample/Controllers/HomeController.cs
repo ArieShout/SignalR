@@ -8,7 +8,7 @@ namespace ChatSample.Controllers
 {
     public class HomeController : Controller
     {
-        [Authorize]
+        //[Authorize]
         public IActionResult Index()
         {
             return View();
