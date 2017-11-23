@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2005
+VisualStudioVersion = 15.0.27004.2009
 MinimumVisualStudioVersion = 15.0.26730.03
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DA69F624-5398-4884-87E4-B816698CDE65}"
 	ProjectSection(SolutionItems) = preProject
@@ -95,7 +95,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JwtClientSample", "samples\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.AspNetCore.SignalR.ServiceCore", "src\Microsoft.AspNetCore.SignalR.ServiceCore\Microsoft.AspNetCore.SignalR.ServiceCore.csproj", "{0CB3D3BE-E64D-477D-A2A3-7610F75D0CCE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.AspNetCore.SignalR.ServiceCommon", "src\Microsoft.AspNetCore.SignalR.ServiceCommon\Microsoft.AspNetCore.SignalR.ServiceCommon.csproj", "{41B4CC2F-6729-473B-884B-5A53A055851C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.AspNetCore.SignalR.ServiceServer", "src\Microsoft.AspNetCore.SignalR.ServiceServer\Microsoft.AspNetCore.SignalR.ServiceServer.csproj", "{CC39E8FD-69C0-40E5-8EDD-EBE72AB5B371}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.AspNetCore.SignalR.ServiceCommon", "src\Microsoft.AspNetCore.SignalR.ServiceCommon\Microsoft.AspNetCore.SignalR.ServiceCommon.csproj", "{AEECC86B-6624-436F-B19B-001559BAFB0B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -215,10 +217,14 @@ Global
 		{0CB3D3BE-E64D-477D-A2A3-7610F75D0CCE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0CB3D3BE-E64D-477D-A2A3-7610F75D0CCE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0CB3D3BE-E64D-477D-A2A3-7610F75D0CCE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{41B4CC2F-6729-473B-884B-5A53A055851C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{41B4CC2F-6729-473B-884B-5A53A055851C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{41B4CC2F-6729-473B-884B-5A53A055851C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{41B4CC2F-6729-473B-884B-5A53A055851C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC39E8FD-69C0-40E5-8EDD-EBE72AB5B371}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC39E8FD-69C0-40E5-8EDD-EBE72AB5B371}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC39E8FD-69C0-40E5-8EDD-EBE72AB5B371}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC39E8FD-69C0-40E5-8EDD-EBE72AB5B371}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AEECC86B-6624-436F-B19B-001559BAFB0B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AEECC86B-6624-436F-B19B-001559BAFB0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AEECC86B-6624-436F-B19B-001559BAFB0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AEECC86B-6624-436F-B19B-001559BAFB0B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -253,7 +259,8 @@ Global
 		{6A7491D3-3C97-49BD-A71C-433AED657F30} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
 		{1A953296-E869-4DE2-A693-FD5FCDE27057} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
 		{0CB3D3BE-E64D-477D-A2A3-7610F75D0CCE} = {DA69F624-5398-4884-87E4-B816698CDE65}
-		{41B4CC2F-6729-473B-884B-5A53A055851C} = {DA69F624-5398-4884-87E4-B816698CDE65}
+		{CC39E8FD-69C0-40E5-8EDD-EBE72AB5B371} = {DA69F624-5398-4884-87E4-B816698CDE65}
+		{AEECC86B-6624-436F-B19B-001559BAFB0B} = {DA69F624-5398-4884-87E4-B816698CDE65}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7945A4E4-ACDB-4F6E-95CA-6AC6E7C2CD59}
