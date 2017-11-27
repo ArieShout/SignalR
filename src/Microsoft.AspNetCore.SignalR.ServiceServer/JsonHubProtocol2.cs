@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using Microsoft.AspNetCore.SignalR.Internal.Formatters;
 using Newtonsoft.Json;
@@ -12,7 +13,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 {
-    public class JsonHubProtocol : IHubProtocol
+    public class JsonHubProtocol2 : IHubProtocol
     {
         private const string ResultPropertyName = "result";
         private const string ItemPropertyName = "item";
@@ -28,21 +29,21 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private JsonSerializer _payloadSerializer;
 
         /// <summary>
-        /// Creates an instance of the <see cref="JsonHubProtocol"/> using the default <see cref="JsonSerializer"/>
+        /// Creates an instance of the <see cref="JsonHubProtocol2"/> using the default <see cref="JsonSerializer"/>
         /// to serialize application payloads (arguments, results, etc.). The serialization of the outer protocol can
         /// NOT be changed using this serializer.
         /// </summary>
-        public JsonHubProtocol()
+        public JsonHubProtocol2()
             : this(JsonSerializer.Create(CreateDefaultSerializerSettings()))
         { }
 
         /// <summary>
-        /// Creates an instance of the <see cref="JsonHubProtocol"/> using the specified <see cref="JsonSerializer"/>
+        /// Creates an instance of the <see cref="JsonHubProtocol2"/> using the specified <see cref="JsonSerializer"/>
         /// to serialize application payloads (arguments, results, etc.). The serialization of the outer protocol can
         /// NOT be changed using this serializer.
         /// </summary>
         /// <param name="payloadSerializer">The <see cref="JsonSerializer"/> to use to serialize application payloads (arguments, results, etc.).</param>
-        public JsonHubProtocol(JsonSerializer payloadSerializer)
+        public JsonHubProtocol2(JsonSerializer payloadSerializer)
         {
             if (payloadSerializer == null)
             {
@@ -260,11 +261,11 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
             var args = JsonUtils.GetRequiredProperty<JArray>(json, ArgumentsPropertyName, JTokenType.Array);
 
-            var paramTypes = binder.GetParameterTypes(target);
+            //var paramTypes = binder.GetParameterTypes(target);
 
             try
             {
-                var arguments = BindArguments(args, paramTypes);
+                var arguments = BindArguments(args);
                 return new InvocationMessage(invocationId, nonBlocking, target, argumentBindingException: null, arguments: arguments);
             }
             catch (Exception ex)
@@ -280,11 +281,11 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
             var args = JsonUtils.GetRequiredProperty<JArray>(json, ArgumentsPropertyName, JTokenType.Array);
 
-            var paramTypes = binder.GetParameterTypes(target);
+            //var paramTypes = binder.GetParameterTypes(target);
 
             try
             {
-                var arguments = BindArguments(args, paramTypes);
+                var arguments = BindArguments(args);
                 return new StreamInvocationMessage(invocationId, target, argumentBindingException: null, arguments: arguments);
             }
             catch (Exception ex)
@@ -293,20 +294,19 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             }
         }
 
-        private object[] BindArguments(JArray args, Type[] paramTypes)
+        private object[] BindArguments(JArray args)
         {
             var arguments = new object[args.Count];
-            if (paramTypes.Length != arguments.Length)
-            {
-                throw new FormatException($"Invocation provides {arguments.Length} argument(s) but target expects {paramTypes.Length}.");
-            }
+            //if (paramTypes.Length != arguments.Length)
+            //{
+            //    throw new FormatException($"Invocation provides {arguments.Length} argument(s) but target expects {paramTypes.Length}.");
+            //}
 
             try
             {
-                for (var i = 0; i < paramTypes.Length; i++)
+                for (var i = 0; i < args.Count; i++)
                 {
-                    var paramType = paramTypes[i];
-                    arguments[i] = args[i].ToObject(paramType, _payloadSerializer);
+                    arguments[i] = args[i].ToObject(typeof(String), _payloadSerializer);
                 }
 
                 return arguments;

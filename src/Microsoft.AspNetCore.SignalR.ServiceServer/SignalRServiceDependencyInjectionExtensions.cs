@@ -28,25 +28,21 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             services.AddRouting();
             services.AddAuthorizationPolicyEvaluator();
-            services.TryAddSingleton<HttpConnectionDispatcher, HttpConnectionDispatcher2>();
-            return services.AddSocketsCore2();
-        }
-
-        public static IServiceCollection AddSocketsCore2(this IServiceCollection services)
-        {
-            services.TryAddSingleton<ConnectionManager>();
-            return services;
+            services.TryAddSingleton<HttpConnectionDispatcher>();
+            return services.AddSocketsCore();
         }
 
         public static ISignalRBuilder AddSignalRCore2(this IServiceCollection services)
         {
             services.AddSingleton(typeof(HubLifetimeManager<>), typeof(DefaultHubLifetimeManager<>));
-            services.AddSingleton(typeof(IHubProtocolResolver), typeof(DefaultHubProtocolResolver));
+            services.AddSingleton(typeof(IHubProtocolResolver), typeof(DefaultHubProtocolResolver2));
             services.AddSingleton(typeof(IHubContext<>), typeof(HubContext<>));
             services.AddSingleton(typeof(IHubContext<,>), typeof(HubContext<,>));
-            services.AddSingleton(typeof(HubEndPoint<>), typeof(HubEndPoint2<>));
+            services.AddSingleton(typeof(HubEndPoint<ClientHub>), typeof(ClientHubEndPoint<ClientHub>));
+            services.AddSingleton(typeof(HubEndPoint<ServerHub>), typeof(ServerHubEndPoint<ServerHub>));
             services.AddSingleton(typeof(IUserIdProvider), typeof(DefaultUserIdProvider));
             services.AddScoped(typeof(IHubActivator<>), typeof(DefaultHubActivator<>));
+            services.AddSingleton(typeof(HubMessageBroker), typeof(HubMessageBroker));
 
             services.AddAuthorization();
 
