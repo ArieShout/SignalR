@@ -42,7 +42,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton(typeof(HubEndPoint<ServerHub>), typeof(ServerHubEndPoint<ServerHub>));
             services.AddSingleton(typeof(IUserIdProvider), typeof(DefaultUserIdProvider));
             services.AddScoped(typeof(IHubActivator<>), typeof(DefaultHubActivator<>));
-            services.AddSingleton(typeof(HubMessageBroker), typeof(HubMessageBroker));
+            services.AddSingleton(typeof(IHubMessageBroker), typeof(HubMessageBroker));
 
             services.AddAuthorization();
 

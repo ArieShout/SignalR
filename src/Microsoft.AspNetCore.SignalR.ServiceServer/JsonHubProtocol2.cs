@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using Microsoft.AspNetCore.SignalR.Internal.Formatters;
+using Microsoft.AspNetCore.SignalR.ServiceServer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -18,6 +19,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private const string ResultPropertyName = "result";
         private const string ItemPropertyName = "item";
         private const string InvocationIdPropertyName = "invocationId";
+        private const string MetadataPropertyName = "meta";
         private const string TypePropertyName = "type";
         private const string ErrorPropertyName = "error";
         private const string TargetPropertyName = "target";
@@ -244,7 +246,20 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         {
             writer.WritePropertyName(InvocationIdPropertyName);
             writer.WriteValue(message.InvocationId);
+            WriteHubInvocationMessageMeta(message, writer);
             WriteMessageType(writer, type);
+        }
+
+        private static void WriteHubInvocationMessageMeta(HubInvocationMessage message, JsonTextWriter writer)
+        {
+            writer.WritePropertyName(MetadataPropertyName);
+            writer.WriteStartObject();
+            foreach (var kvp in message.Metadata)
+            {
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteValue(kvp.Value);
+            }
+            writer.WriteEndObject();
         }
 
         private static void WriteMessageType(JsonTextWriter writer, int type)
@@ -253,12 +268,18 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             writer.WriteValue(type);
         }
 
+        private static IDictionary<string, string> GetMetedata(JObject json)
+        {
+            IDictionary<string, JToken> metadata = (JObject)json[MetadataPropertyName];
+            return metadata == null ? new Dictionary<string, string>() : metadata.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString());
+        }
+
         private InvocationMessage BindInvocationMessage(JObject json, IInvocationBinder binder)
         {
             var invocationId = JsonUtils.GetRequiredProperty<string>(json, InvocationIdPropertyName, JTokenType.String);
+            var metadata = GetMetedata(json);
             var target = JsonUtils.GetRequiredProperty<string>(json, TargetPropertyName, JTokenType.String);
             var nonBlocking = JsonUtils.GetOptionalProperty<bool>(json, NonBlockingPropertyName, JTokenType.Boolean);
-
             var args = JsonUtils.GetRequiredProperty<JArray>(json, ArgumentsPropertyName, JTokenType.Array);
 
             //var paramTypes = binder.GetParameterTypes(target);
@@ -266,17 +287,18 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             try
             {
                 var arguments = BindArguments(args);
-                return new InvocationMessage(invocationId, nonBlocking, target, argumentBindingException: null, arguments: arguments);
+                return new InvocationMessage(invocationId, nonBlocking, target, argumentBindingException: null, arguments: arguments).AddMetadata(metadata);
             }
             catch (Exception ex)
             {
-                return new InvocationMessage(invocationId, nonBlocking, target, ExceptionDispatchInfo.Capture(ex));
+                return new InvocationMessage(invocationId, nonBlocking, target, ExceptionDispatchInfo.Capture(ex)).AddMetadata(metadata);
             }
         }
 
         private StreamInvocationMessage BindStreamInvocationMessage(JObject json, IInvocationBinder binder)
         {
             var invocationId = JsonUtils.GetRequiredProperty<string>(json, InvocationIdPropertyName, JTokenType.String);
+            var metadata = GetMetedata(json);
             var target = JsonUtils.GetRequiredProperty<string>(json, TargetPropertyName, JTokenType.String);
 
             var args = JsonUtils.GetRequiredProperty<JArray>(json, ArgumentsPropertyName, JTokenType.Array);
@@ -286,11 +308,11 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             try
             {
                 var arguments = BindArguments(args);
-                return new StreamInvocationMessage(invocationId, target, argumentBindingException: null, arguments: arguments);
+                return new StreamInvocationMessage(invocationId, target, argumentBindingException: null, arguments: arguments).AddMetadata(metadata);
             }
             catch (Exception ex)
             {
-                return new StreamInvocationMessage(invocationId, target, ExceptionDispatchInfo.Capture(ex));
+                return new StreamInvocationMessage(invocationId, target, ExceptionDispatchInfo.Capture(ex)).AddMetadata(metadata);
             }
         }
 
@@ -320,15 +342,17 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private StreamItemMessage BindStreamItemMessage(JObject json, IInvocationBinder binder)
         {
             var invocationId = JsonUtils.GetRequiredProperty<string>(json, InvocationIdPropertyName, JTokenType.String);
+            var metadata = GetMetedata(json);
             var result = JsonUtils.GetRequiredProperty<JToken>(json, ItemPropertyName);
 
             var returnType = binder.GetReturnType(invocationId);
-            return new StreamItemMessage(invocationId, result?.ToObject(returnType, _payloadSerializer));
+            return new StreamItemMessage(invocationId, result?.ToObject(returnType, _payloadSerializer)).AddMetadata(metadata);
         }
 
         private CompletionMessage BindCompletionMessage(JObject json, IInvocationBinder binder)
         {
             var invocationId = JsonUtils.GetRequiredProperty<string>(json, InvocationIdPropertyName, JTokenType.String);
+            var metadata = GetMetedata(json);
             var error = JsonUtils.GetOptionalProperty<string>(json, ErrorPropertyName, JTokenType.String);
             var resultProp = json.Property(ResultPropertyName);
 
@@ -339,18 +363,19 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
             if (resultProp == null)
             {
-                return new CompletionMessage(invocationId, error, result: null, hasResult: false);
+                return new CompletionMessage(invocationId, error, result: null, hasResult: false).AddMetadata(metadata);
             }
 
             var returnType = binder.GetReturnType(invocationId);
             var payload = resultProp.Value?.ToObject(returnType, _payloadSerializer);
-            return new CompletionMessage(invocationId, error, result: payload, hasResult: true);
+            return new CompletionMessage(invocationId, error, result: payload, hasResult: true).AddMetadata(metadata);
         }
 
         private CancelInvocationMessage BindCancelInvocationMessage(JObject json)
         {
             var invocationId = JsonUtils.GetRequiredProperty<string>(json, InvocationIdPropertyName, JTokenType.String);
-            return new CancelInvocationMessage(invocationId);
+            var metadata = GetMetedata(json);
+            return new CancelInvocationMessage(invocationId).AddMetadata(metadata).AddMetadata(metadata);
         }
 
         public static JsonSerializerSettings CreateDefaultSerializerSettings()

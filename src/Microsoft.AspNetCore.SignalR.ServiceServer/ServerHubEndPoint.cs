@@ -40,7 +40,7 @@ namespace Microsoft.AspNetCore.SignalR
         private readonly IHubProtocolResolver _protocolResolver;
         private readonly HubOptions _hubOptions;
         private readonly IUserIdProvider _userIdProvider;
-        private readonly HubMessageBroker _hubMessageBroker;
+        private readonly IHubMessageBroker _hubMessageBroker;
 
         public ServerHubEndPoint(HubLifetimeManager<THub> lifetimeManager,
                            IHubProtocolResolver protocolResolver,
@@ -49,7 +49,7 @@ namespace Microsoft.AspNetCore.SignalR
                            ILogger<ServerHubEndPoint<THub>> logger,
                            IServiceScopeFactory serviceScopeFactory,
                            IUserIdProvider userIdProvider,
-                           HubMessageBroker hubMessageBroker) : base(lifetimeManager, protocolResolver, hubContext, hubOptions, logger, serviceScopeFactory, userIdProvider)
+                           IHubMessageBroker hubMessageBroker) : base(lifetimeManager, protocolResolver, hubContext, hubOptions, logger, serviceScopeFactory, userIdProvider)
         {
             _protocolResolver = protocolResolver;
             _lifetimeManager = lifetimeManager;
