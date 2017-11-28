@@ -5,7 +5,7 @@ using System;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.AspNetCore.SignalR.Core.Internal
+namespace Microsoft.AspNetCore.SignalR.ServiceCore.Internal
 {
     internal static class SignalRCoreLoggerExtensions
     {

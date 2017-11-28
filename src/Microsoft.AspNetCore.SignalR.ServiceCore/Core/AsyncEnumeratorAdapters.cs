@@ -7,8 +7,9 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Channels;
+using Microsoft.AspNetCore.SignalR.Internal;
 
-namespace Microsoft.AspNetCore.SignalR.Internal
+namespace Microsoft.AspNetCore.SignalR.ServiceCore.Internal
 {
     // True-internal because this is a weird and tricky class to use :)
     internal static class AsyncEnumeratorAdapters
