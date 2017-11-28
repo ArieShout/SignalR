@@ -44,7 +44,7 @@ namespace Microsoft.AspNetCore.SignalR
                 message.Metadata.Add(ConnectionIdKeyName, context.ConnectionId);
 
                 // TODO: Assign one server for this client connection
-                await serverHubManager.InvokeAllAsync(message.Target, message.Arguments);
+                await ((DefaultHubLifetimeManager<ServerHub>)serverHubManager).SendMessageAllAsync(message);
             }
         }
 
