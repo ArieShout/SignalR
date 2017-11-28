@@ -20,7 +20,7 @@ namespace ChatSample
                     factory.AddDebug();
                 })
                 .UseKestrel()
-                .UseUrls("http://*:5000/")
+                .UseUrls("http://*:5001/")
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseIISIntegration()
                 .UseStartup<Startup>()

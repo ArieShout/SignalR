@@ -20,8 +20,33 @@ namespace Microsoft.Extensions.DependencyInjection
         public static ISignalRBuilder AddSignalRServiceServer(this IServiceCollection services, Action<HubOptions> configure)
         {
             services.Configure(configure);
-            services.AddSockets();
-            return services.AddSignalRCore();
+            services.AddSockets2();
+            return services.AddSignalRCore2();
+        }
+
+        public static IServiceCollection AddSockets2(this IServiceCollection services)
+        {
+            services.AddRouting();
+            services.AddAuthorizationPolicyEvaluator();
+            services.TryAddSingleton<HttpConnectionDispatcher>();
+            return services.AddSocketsCore();
+        }
+
+        public static ISignalRBuilder AddSignalRCore2(this IServiceCollection services)
+        {
+            services.AddSingleton(typeof(HubLifetimeManager<>), typeof(DefaultHubLifetimeManager<>));
+            services.AddSingleton(typeof(IHubProtocolResolver), typeof(DefaultHubProtocolResolver2));
+            services.AddSingleton(typeof(IHubContext<>), typeof(HubContext<>));
+            services.AddSingleton(typeof(IHubContext<,>), typeof(HubContext<,>));
+            services.AddSingleton(typeof(HubEndPoint<ClientHub>), typeof(ClientHubEndPoint<ClientHub>));
+            services.AddSingleton(typeof(HubEndPoint<ServerHub>), typeof(ServerHubEndPoint<ServerHub>));
+            services.AddSingleton(typeof(IUserIdProvider), typeof(DefaultUserIdProvider));
+            services.AddScoped(typeof(IHubActivator<>), typeof(DefaultHubActivator<>));
+            services.AddSingleton(typeof(IHubMessageBroker), typeof(HubMessageBroker));
+
+            services.AddAuthorization();
+
+            return new SignalRBuilder(services);
         }
     }
 }

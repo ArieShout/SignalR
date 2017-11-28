@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace ChatSample.Hubs
 {
-    //[Authorize]
+    [Authorize]
     public class Chat : HubWithPresence
     {
         public Chat(IUserTracker<Chat> userTracker)

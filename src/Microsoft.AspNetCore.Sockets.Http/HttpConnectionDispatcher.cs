@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Sockets.Internal;
 using Microsoft.AspNetCore.Sockets.Internal.Transports;
 using Microsoft.Extensions.Logging;
@@ -512,6 +513,12 @@ namespace Microsoft.AspNetCore.Sockets
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                 await context.Response.WriteAsync("No Connection with that ID");
                 return null;
+            }
+
+            var hubName = context.GetRouteValue("hubName");
+            if (hubName != null)
+            {
+                connection.Metadata.Add("HubName", hubName.ToString());
             }
 
             return connection;

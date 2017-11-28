@@ -171,5 +171,17 @@ namespace Microsoft.AspNetCore.SignalR
                 return !excludedIds.Contains(connection.ConnectionId);
             });
         }
+
+        public Task SendMessageAsync(string connectionId, HubInvocationMessage message)
+        {
+            if (connectionId == null)
+            {
+                throw new ArgumentNullException(nameof(connectionId));
+            }
+
+            var connection = _connections[connectionId];
+
+            return connection == null ? Task.CompletedTask : WriteAsync(connection, message);
+        }
     }
 }

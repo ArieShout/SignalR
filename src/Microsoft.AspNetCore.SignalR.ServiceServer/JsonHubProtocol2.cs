@@ -4,19 +4,22 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using Microsoft.AspNetCore.SignalR.Internal.Formatters;
+using Microsoft.AspNetCore.SignalR.ServiceServer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 {
-    public class JsonHubProtocol : IHubProtocol
+    public class JsonHubProtocol2 : IHubProtocol
     {
         private const string ResultPropertyName = "result";
         private const string ItemPropertyName = "item";
         private const string InvocationIdPropertyName = "invocationId";
+        private const string MetadataPropertyName = "meta";
         private const string TypePropertyName = "type";
         private const string ErrorPropertyName = "error";
         private const string TargetPropertyName = "target";
@@ -28,21 +31,21 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private JsonSerializer _payloadSerializer;
 
         /// <summary>
-        /// Creates an instance of the <see cref="JsonHubProtocol"/> using the default <see cref="JsonSerializer"/>
+        /// Creates an instance of the <see cref="JsonHubProtocol2"/> using the default <see cref="JsonSerializer"/>
         /// to serialize application payloads (arguments, results, etc.). The serialization of the outer protocol can
         /// NOT be changed using this serializer.
         /// </summary>
-        public JsonHubProtocol()
+        public JsonHubProtocol2()
             : this(JsonSerializer.Create(CreateDefaultSerializerSettings()))
         { }
 
         /// <summary>
-        /// Creates an instance of the <see cref="JsonHubProtocol"/> using the specified <see cref="JsonSerializer"/>
+        /// Creates an instance of the <see cref="JsonHubProtocol2"/> using the specified <see cref="JsonSerializer"/>
         /// to serialize application payloads (arguments, results, etc.). The serialization of the outer protocol can
         /// NOT be changed using this serializer.
         /// </summary>
         /// <param name="payloadSerializer">The <see cref="JsonSerializer"/> to use to serialize application payloads (arguments, results, etc.).</param>
-        public JsonHubProtocol(JsonSerializer payloadSerializer)
+        public JsonHubProtocol2(JsonSerializer payloadSerializer)
         {
             if (payloadSerializer == null)
             {
@@ -243,7 +246,20 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         {
             writer.WritePropertyName(InvocationIdPropertyName);
             writer.WriteValue(message.InvocationId);
+            WriteHubInvocationMessageMeta(message, writer);
             WriteMessageType(writer, type);
+        }
+
+        private static void WriteHubInvocationMessageMeta(HubInvocationMessage message, JsonTextWriter writer)
+        {
+            writer.WritePropertyName(MetadataPropertyName);
+            writer.WriteStartObject();
+            foreach (var kvp in message.Metadata)
+            {
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteValue(kvp.Value);
+            }
+            writer.WriteEndObject();
         }
 
         private static void WriteMessageType(JsonTextWriter writer, int type)
@@ -252,61 +268,67 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             writer.WriteValue(type);
         }
 
+        private static IDictionary<string, string> GetMetedata(JObject json)
+        {
+            IDictionary<string, JToken> metadata = (JObject)json[MetadataPropertyName];
+            return metadata == null ? new Dictionary<string, string>() : metadata.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString());
+        }
+
         private InvocationMessage BindInvocationMessage(JObject json, IInvocationBinder binder)
         {
             var invocationId = JsonUtils.GetRequiredProperty<string>(json, InvocationIdPropertyName, JTokenType.String);
+            var metadata = GetMetedata(json);
             var target = JsonUtils.GetRequiredProperty<string>(json, TargetPropertyName, JTokenType.String);
             var nonBlocking = JsonUtils.GetOptionalProperty<bool>(json, NonBlockingPropertyName, JTokenType.Boolean);
-
             var args = JsonUtils.GetRequiredProperty<JArray>(json, ArgumentsPropertyName, JTokenType.Array);
 
-            var paramTypes = binder.GetParameterTypes(target);
+            //var paramTypes = binder.GetParameterTypes(target);
 
             try
             {
-                var arguments = BindArguments(args, paramTypes);
-                return new InvocationMessage(invocationId, nonBlocking, target, argumentBindingException: null, arguments: arguments);
+                var arguments = BindArguments(args);
+                return new InvocationMessage(invocationId, nonBlocking, target, argumentBindingException: null, arguments: arguments).AddMetadata(metadata);
             }
             catch (Exception ex)
             {
-                return new InvocationMessage(invocationId, nonBlocking, target, ExceptionDispatchInfo.Capture(ex));
+                return new InvocationMessage(invocationId, nonBlocking, target, ExceptionDispatchInfo.Capture(ex)).AddMetadata(metadata);
             }
         }
 
         private StreamInvocationMessage BindStreamInvocationMessage(JObject json, IInvocationBinder binder)
         {
             var invocationId = JsonUtils.GetRequiredProperty<string>(json, InvocationIdPropertyName, JTokenType.String);
+            var metadata = GetMetedata(json);
             var target = JsonUtils.GetRequiredProperty<string>(json, TargetPropertyName, JTokenType.String);
 
             var args = JsonUtils.GetRequiredProperty<JArray>(json, ArgumentsPropertyName, JTokenType.Array);
 
-            var paramTypes = binder.GetParameterTypes(target);
+            //var paramTypes = binder.GetParameterTypes(target);
 
             try
             {
-                var arguments = BindArguments(args, paramTypes);
-                return new StreamInvocationMessage(invocationId, target, argumentBindingException: null, arguments: arguments);
+                var arguments = BindArguments(args);
+                return new StreamInvocationMessage(invocationId, target, argumentBindingException: null, arguments: arguments).AddMetadata(metadata);
             }
             catch (Exception ex)
             {
-                return new StreamInvocationMessage(invocationId, target, ExceptionDispatchInfo.Capture(ex));
+                return new StreamInvocationMessage(invocationId, target, ExceptionDispatchInfo.Capture(ex)).AddMetadata(metadata);
             }
         }
 
-        private object[] BindArguments(JArray args, Type[] paramTypes)
+        private object[] BindArguments(JArray args)
         {
             var arguments = new object[args.Count];
-            if (paramTypes.Length != arguments.Length)
-            {
-                throw new FormatException($"Invocation provides {arguments.Length} argument(s) but target expects {paramTypes.Length}.");
-            }
+            //if (paramTypes.Length != arguments.Length)
+            //{
+            //    throw new FormatException($"Invocation provides {arguments.Length} argument(s) but target expects {paramTypes.Length}.");
+            //}
 
             try
             {
-                for (var i = 0; i < paramTypes.Length; i++)
+                for (var i = 0; i < args.Count; i++)
                 {
-                    var paramType = paramTypes[i];
-                    arguments[i] = args[i].ToObject(paramType, _payloadSerializer);
+                    arguments[i] = args[i].ToObject(typeof(String), _payloadSerializer);
                 }
 
                 return arguments;
@@ -320,15 +342,17 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private StreamItemMessage BindStreamItemMessage(JObject json, IInvocationBinder binder)
         {
             var invocationId = JsonUtils.GetRequiredProperty<string>(json, InvocationIdPropertyName, JTokenType.String);
+            var metadata = GetMetedata(json);
             var result = JsonUtils.GetRequiredProperty<JToken>(json, ItemPropertyName);
 
             var returnType = binder.GetReturnType(invocationId);
-            return new StreamItemMessage(invocationId, result?.ToObject(returnType, _payloadSerializer));
+            return new StreamItemMessage(invocationId, result?.ToObject(returnType, _payloadSerializer)).AddMetadata(metadata);
         }
 
         private CompletionMessage BindCompletionMessage(JObject json, IInvocationBinder binder)
         {
             var invocationId = JsonUtils.GetRequiredProperty<string>(json, InvocationIdPropertyName, JTokenType.String);
+            var metadata = GetMetedata(json);
             var error = JsonUtils.GetOptionalProperty<string>(json, ErrorPropertyName, JTokenType.String);
             var resultProp = json.Property(ResultPropertyName);
 
@@ -339,18 +363,19 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
             if (resultProp == null)
             {
-                return new CompletionMessage(invocationId, error, result: null, hasResult: false);
+                return new CompletionMessage(invocationId, error, result: null, hasResult: false).AddMetadata(metadata);
             }
 
             var returnType = binder.GetReturnType(invocationId);
             var payload = resultProp.Value?.ToObject(returnType, _payloadSerializer);
-            return new CompletionMessage(invocationId, error, result: payload, hasResult: true);
+            return new CompletionMessage(invocationId, error, result: payload, hasResult: true).AddMetadata(metadata);
         }
 
         private CancelInvocationMessage BindCancelInvocationMessage(JObject json)
         {
             var invocationId = JsonUtils.GetRequiredProperty<string>(json, InvocationIdPropertyName, JTokenType.String);
-            return new CancelInvocationMessage(invocationId);
+            var metadata = GetMetedata(json);
+            return new CancelInvocationMessage(invocationId).AddMetadata(metadata).AddMetadata(metadata);
         }
 
         public static JsonSerializerSettings CreateDefaultSerializerSettings()

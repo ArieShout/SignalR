@@ -60,7 +60,7 @@ namespace Microsoft.AspNetCore.SignalR
             DiscoverHubMethods();
         }
 
-        public async Task OnConnectedAsync(ConnectionContext connection)
+        public virtual async Task OnConnectedAsync(ConnectionContext connection)
         {
             var output = Channel.CreateUnbounded<HubMessage>();
 

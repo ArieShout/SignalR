@@ -13,7 +13,9 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
         ProtocolType Type { get; }
 
+#pragma warning disable 618
         bool TryParseMessages(ReadOnlySpan<byte> input, IInvocationBinder binder, out IList<HubMessage> messages);
+#pragma warning restore 618
 
         void WriteMessage(HubMessage message, Stream output);
     }
