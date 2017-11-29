@@ -21,21 +21,24 @@ namespace Microsoft.AspNetCore.SignalR
         private readonly ConcurrentDictionary<string, HubLifetimeManager<ServerHub>> _serverHubManagerDict = new ConcurrentDictionary<string, HubLifetimeManager<ServerHub>>();
 
         private readonly IHubConnectionRouter _router;
+        private readonly IHubLifetimeManagerFactory _hubLifetimeManagerFactory;
 
-        public HubMessageBroker(IHubConnectionRouter router)
+        public HubMessageBroker(IHubConnectionRouter router, IHubLifetimeManagerFactory hubLifetimeManagerFactory)
         {
             _router = router;
+            _hubLifetimeManagerFactory = hubLifetimeManagerFactory;
         }
 
         #region Client connections
 
         public async Task OnClientConnectedAsync(string hubName, HubConnectionContext context)
         {
-            var clientHubManager = _clientHubManagerDict.GetOrAdd(hubName, new DefaultHubLifetimeManager<ClientHub>());
+            var clientHubManager = _clientHubManagerDict.GetOrAdd(hubName, _hubLifetimeManagerFactory.Create<ClientHub>(hubName));
             await clientHubManager.OnConnectedAsync(context);
 
             // Assign client connection to a server connection
-            _router.OnClientConnected(hubName, context);
+            // Don't wait for its completion
+            _ = _router.OnClientConnected(hubName, context);
 
             // Invoke OnConnectedAsync on server
             await PassThruClientMessage(hubName, context,
@@ -50,7 +53,8 @@ namespace Microsoft.AspNetCore.SignalR
                 await clientHubManager.OnDisconnectedAsync(context);
             }
 
-            _router.OnClientDisconnected(hubName, context);
+            // Don't wait for it completion
+            _ = _router.OnClientDisconnected(hubName, context);
 
             // Invoke OnDiconnectedAsync on server
             await PassThruClientMessage(hubName, context,
@@ -82,7 +86,7 @@ namespace Microsoft.AspNetCore.SignalR
 
         public async Task OnServerConnectedAsync(string hubName, HubConnectionContext context)
         {
-            var serverHubManager = _serverHubManagerDict.GetOrAdd(hubName, new DefaultHubLifetimeManager<ServerHub>());
+            var serverHubManager = _serverHubManagerDict.GetOrAdd(hubName, _hubLifetimeManagerFactory.Create<ServerHub>(hubName));
             await serverHubManager.OnConnectedAsync(context);
             _router.OnServerConnected(hubName, context);
         }

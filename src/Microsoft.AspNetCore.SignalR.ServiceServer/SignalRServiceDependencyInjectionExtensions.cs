@@ -5,6 +5,7 @@ using System;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Core;
 using Microsoft.AspNetCore.SignalR.Internal;
+using Microsoft.AspNetCore.SignalR.Redis;
 using Microsoft.AspNetCore.SignalR.ServiceServer;
 using Microsoft.AspNetCore.Sockets;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -43,12 +44,25 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton(typeof(HubEndPoint<ServerHub>), typeof(ServerHubEndPoint<ServerHub>));
             services.AddSingleton(typeof(IUserIdProvider), typeof(DefaultUserIdProvider));
             services.AddScoped(typeof(IHubActivator<>), typeof(DefaultHubActivator<>));
+            services.AddSingleton(typeof(IHubLifetimeManagerFactory), typeof(DefaultHubLifetimeManagerFactory));
             services.AddSingleton(typeof(IHubMessageBroker), typeof(HubMessageBroker));
             services.AddSingleton(typeof(IHubConnectionRouter), typeof(HubConnectionRouter));
 
             services.AddAuthorization();
 
             return new SignalRBuilder(services);
+        }
+
+        public static ISignalRBuilder AddRedis(this ISignalRBuilder builder)
+        {
+            return AddRedis(builder, o => { });
+        }
+
+        public static ISignalRBuilder AddRedis(this ISignalRBuilder builder, Action<RedisOptions2> configure)
+        {
+            builder.Services.Configure(configure);
+            builder.Services.AddSingleton(typeof(IHubLifetimeManagerFactory), typeof(RedisHubLifetimeManagerFactory));
+            return builder;
         }
     }
 }

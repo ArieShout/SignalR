@@ -172,14 +172,6 @@ namespace Microsoft.AspNetCore.SignalR
             });
         }
 
-        public Task SendMessageAllAsync(HubInvocationMessage message)
-        {
-            var tasks = new List<Task>(_connections.Count);
-            // TODO: serialize once per format by providing a different stream?
-            tasks.AddRange(_connections.Select(connection => WriteAsync(connection, message)));
-            return Task.WhenAll(tasks);
-        }
-
         public Task SendMessageAsync(string connectionId, HubInvocationMessage message)
         {
             if (connectionId == null)
