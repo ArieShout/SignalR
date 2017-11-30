@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
+using Microsoft.AspNetCore.SignalR.ServiceServer;
 
 namespace Microsoft.AspNetCore.SignalR
 {
@@ -17,49 +16,63 @@ namespace Microsoft.AspNetCore.SignalR
         private const string OnConnectedMethodName = "OnConnectedAsync";
         private const string OnDisconnectedMethodName = "OnDisconnectedAsync";
 
+        // TODO: cleanup unused HubLifetimeManager to avoid memory leak
         private readonly ConcurrentDictionary<string, HubLifetimeManager<ClientHub>> _clientHubManagerDict = new ConcurrentDictionary<string, HubLifetimeManager<ClientHub>>();
         private readonly ConcurrentDictionary<string, HubLifetimeManager<ServerHub>> _serverHubManagerDict = new ConcurrentDictionary<string, HubLifetimeManager<ServerHub>>();
-        private readonly ConcurrentDictionary<string, string> _pendingClientCalls = new ConcurrentDictionary<string, string>();
+
+        private readonly IHubConnectionRouter _router;
+
+        public HubMessageBroker(IHubConnectionRouter router)
+        {
+            _router = router;
+        }
 
         #region Client connections
 
-        public async Task OnClientConnectedAsync(string hubName, HubConnectionContext2 context)
+        public async Task OnClientConnectedAsync(string hubName, HubConnectionContext context)
         {
             var clientHubManager = _clientHubManagerDict.GetOrAdd(hubName, new DefaultHubLifetimeManager<ClientHub>());
             await clientHubManager.OnConnectedAsync(context);
+
+            // Assign client connection to a server connection
+            _router.OnClientConnected(hubName, context);
+
             // Invoke OnConnectedAsync on server
             await PassThruClientMessage(hubName, context,
-                new InvocationMessage(Guid.NewGuid().ToString(), true, OnConnectedMethodName, null, null));
+                new InvocationMessage(Guid.NewGuid().ToString(), true, OnConnectedMethodName, null, new object[0]));
         }
 
-        public async Task OnClientDisconnectedAsync(string hubName, HubConnectionContext2 context)
+        public async Task OnClientDisconnectedAsync(string hubName, HubConnectionContext context)
         {
             var clientHubManager = _clientHubManagerDict[hubName];
             if (clientHubManager != null)
             {
                 await clientHubManager.OnDisconnectedAsync(context);
-                // Invoke OnDiconnectedAsync on server
-                await PassThruClientMessage(hubName, context,
-                    new InvocationMessage(Guid.NewGuid().ToString(), true, OnDisconnectedMethodName, null, null));
             }
+
+            _router.OnClientDisconnected(hubName, context);
+
+            // Invoke OnDiconnectedAsync on server
+            await PassThruClientMessage(hubName, context,
+                new InvocationMessage(Guid.NewGuid().ToString(), true, OnDisconnectedMethodName, null, new object[0]));
         }
 
-        public async Task PassThruClientMessage(string hubName, HubConnectionContext2 context, HubMethodInvocationMessage message)
+        public async Task PassThruClientMessage(string hubName, HubConnectionContext context, HubMethodInvocationMessage message)
         {
+            var targetConnId = context.GetTargetConnectionId();
+
+            if (!IsServerConnectionAlive(targetConnId))
+            {
+                throw new Exception("No assigned server.");
+            }
+
             var serverHubManager = _serverHubManagerDict[hubName];
             if (serverHubManager != null)
             {
-                if (!string.Equals(message.Target, OnConnectedMethodName, StringComparison.InvariantCultureIgnoreCase) &&
-                    !string.Equals(message.Target, OnDisconnectedMethodName, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    _pendingClientCalls.TryAdd(message.InvocationId, context.ConnectionId);
-                }
-
                 // Add original connection Id to message metadata
                 message.Metadata.Add(ConnectionIdKeyName, context.ConnectionId);
 
-                // TODO: Assign one server for this client connection
-                await ((DefaultHubLifetimeManager<ServerHub>)serverHubManager).SendMessageAllAsync(message);
+                await ((DefaultHubLifetimeManager<ServerHub>)serverHubManager).SendMessageAsync(targetConnId, message);
             }
         }
 
@@ -67,40 +80,43 @@ namespace Microsoft.AspNetCore.SignalR
 
         #region Server connections
 
-        public async Task OnServerConnectedAsync(string hubName, HubConnectionContext2 context)
+        public async Task OnServerConnectedAsync(string hubName, HubConnectionContext context)
         {
             var serverHubManager = _serverHubManagerDict.GetOrAdd(hubName, new DefaultHubLifetimeManager<ServerHub>());
             await serverHubManager.OnConnectedAsync(context);
+            _router.OnServerConnected(hubName, context);
         }
 
-        public async Task OnServerDisconnectedAsync(string hubName, HubConnectionContext2 context)
+        public async Task OnServerDisconnectedAsync(string hubName, HubConnectionContext context)
         {
             var serverHubManager = _serverHubManagerDict[hubName];
             if (serverHubManager != null)
             {
                 await serverHubManager.OnDisconnectedAsync(context);
             }
+            _router.OnServerConnected(hubName, context);
+            // TODO: Disconnect all client connections routing to this server
         }
 
-        public async Task PassThruServerMessage(string hubName, HubConnectionContext2 context, HubMethodInvocationMessage message)
+        public async Task PassThruServerMessage(string hubName, HubConnectionContext context, HubMethodInvocationMessage message)
         {
             var clientHubManager = _clientHubManagerDict[hubName];
             if (clientHubManager != null)
             {
                 // Invoke a single connection
-                if (message.Metadata.TryGetValue(ConnectionIdKeyName, out var connectionId))
+                if (message.TryGetProperty(ConnectionIdKeyName, out var connectionId))
                 {
                     await clientHubManager.InvokeConnectionAsync(connectionId, message.Target,
                         message.Arguments);
                 }
                 // Invoke a group
-                else if (message.Metadata.TryGetValue(GroupNameKeyName, out var groupName))
+                else if (message.TryGetProperty(GroupNameKeyName, out var groupName))
                 {
                     await clientHubManager.InvokeGroupAsync(groupName, message.Target,
                         message.Arguments);
                 }
                 // Invoke all except
-                else if (message.Metadata.TryGetValue(ExcludedIdsKeyName, out var excludedIds))
+                else if (message.TryGetProperty(ExcludedIdsKeyName, out var excludedIds))
                 {
                     await clientHubManager.InvokeAllExceptAsync(message.Target, message.Arguments,
                         excludedIds.Split(',').ToList());
@@ -113,16 +129,26 @@ namespace Microsoft.AspNetCore.SignalR
             }
         }
 
-        public async Task PassThruServerMessage(string hubName, HubConnectionContext2 context, CompletionMessage message)
+        public async Task PassThruServerMessage(string hubName, HubConnectionContext context, CompletionMessage message)
         {
             var clientHubManager = _clientHubManagerDict[hubName];
             if (clientHubManager != null)
             {
-                if (_pendingClientCalls.TryRemove(message.InvocationId, out var connectionId))
+                if (message.TryGetProperty(ConnectionIdKeyName, out var connectionId))
                 {
                     await ((DefaultHubLifetimeManager<ClientHub>)clientHubManager).SendMessageAsync(connectionId, message);
                 }
             }
+        }
+
+        #endregion
+
+        #region Utilities
+
+        // TODO: implement check liveness of server connection
+        private bool IsServerConnectionAlive(string connectionId)
+        {
+            return !string.IsNullOrEmpty(connectionId);
         }
 
         #endregion

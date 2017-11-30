@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 
 namespace Microsoft.AspNetCore.SignalR.ServiceServer
@@ -16,6 +13,16 @@ namespace Microsoft.AspNetCore.SignalR.ServiceServer
                 message.Metadata.Add(kvp.Key, kvp.Value);
             }
             return message;
+        }
+
+        public static bool TryGetProperty(this HubInvocationMessage message, string propertyName, out string propertyValue)
+        {
+            if (message.Metadata == null)
+            {
+                propertyValue = null;
+                return false;
+            }
+            return message.Metadata.TryGetValue(propertyName, out propertyValue);
         }
     }
 }
