@@ -132,18 +132,6 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
         {
             try
             {
-                // We wait on abort to complete, this is so that we can guarantee that all callbacks have fired
-                // before OnDisconnectedAsync
-                try
-                {
-                    // Ensure the connection is aborted before firing disconnect
-                    await _hubConnection.DisposeAsync();
-                }
-                catch (Exception ex)
-                {
-                    _logger.AbortFailed(ex);
-                }
-
                 using (var scope = _serviceScopeFactory.CreateScope())
                 {
                     var hubActivator = scope.ServiceProvider.GetRequiredService<IHubActivator<THub>>();
