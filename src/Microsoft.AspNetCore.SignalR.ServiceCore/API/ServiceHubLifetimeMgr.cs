@@ -26,5 +26,6 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore.API
         public abstract Task AddGroupAsync(string connectionId, string groupName);
 
         public abstract Task RemoveGroupAsync(string connectionId, string groupName);
+        public abstract ServiceHubConnectionList Connections { get; } // new API, added by requirement of prototype
     }
 }

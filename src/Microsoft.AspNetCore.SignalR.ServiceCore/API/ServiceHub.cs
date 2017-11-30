@@ -12,7 +12,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore.API
     {
         private bool _disposed;
         private IServiceHubClients _clients;
-
+        private ServiceHubCallerContext _context;
         public IServiceHubClients Clients
         {
             get
@@ -27,12 +27,26 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore.API
             }
         }
 
+        public ServiceHubCallerContext Context
+        {
+            get
+            {
+                CheckDisposed();
+                return _context;
+            }
+            set
+            {
+                CheckDisposed();
+                _context = value;
+            }
+        }
+
         public virtual Task OnConnectedAsync()
         {
             return Task.CompletedTask;
         }
 
-        public virtual Task OnDisconnectedAsync(Exception exception)
+        public virtual Task OnDisconnectedAsync()
         {
             return Task.CompletedTask;
         }

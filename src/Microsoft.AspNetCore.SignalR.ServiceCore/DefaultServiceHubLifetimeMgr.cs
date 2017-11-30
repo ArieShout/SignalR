@@ -6,11 +6,16 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.ServiceCore.API;
+using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 
 namespace Microsoft.AspNetCore.SignalR.ServiceCore
 {
     public class DefaultServiceHubLifetimeMgr<THub> : ServiceHubLifetimeMgr<THub>
     {
+        private readonly ServiceHubConnectionList _connections = new ServiceHubConnectionList();
+
+        public override ServiceHubConnectionList Connections => _connections;
+
         public override Task AddGroupAsync(string connectionId, string groupName)
         {
             throw new NotImplementedException();
@@ -18,7 +23,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
 
         public override Task InvokeAllAsync(string methodName, object[] args)
         {
-            throw new NotImplementedException();
+            return InvokeAllWhere(methodName, args, c => true);
         }
 
         public override Task InvokeAllExceptAsync(string methodName, object[] args, IReadOnlyList<string> excludedIds)
@@ -43,17 +48,39 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
 
         public override Task OnConnectedAsync(ServiceHubConnectionContext connection)
         {
-            throw new NotImplementedException();
+            _connections.Add(connection);
+            return Task.CompletedTask;
         }
 
         public override Task OnDisconnectedAsync(ServiceHubConnectionContext connection)
         {
-            throw new NotImplementedException();
+            _connections.Remove(connection);
+            return Task.CompletedTask;
         }
 
         public override Task RemoveGroupAsync(string connectionId, string groupName)
         {
             throw new NotImplementedException();
+        }
+
+        private Task InvokeAllWhere(string methodName, object[] args, Func<ServiceHubConnectionContext, bool> include)
+        {
+            var tasks = new List<Task>(_connections.Count);
+            foreach (var connection in _connections)
+            {
+                if (!include(connection))
+                {
+                    continue;
+                }
+                tasks.Add(WriteAsync(connection, methodName, args));
+            }
+
+            return Task.WhenAll(tasks);
+        }
+
+        private async Task WriteAsync(ServiceHubConnectionContext connection, string methodName, object[] args)
+        {
+            await connection.InvokeAsync(methodName, args);
         }
     }
 }

@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
+using Microsoft.AspNetCore.SignalR.Internal;
 namespace Microsoft.AspNetCore.SignalR.ServiceCore.Connection
 {
-    public interface IServiceHubConnection
+    public interface IServiceHubReceiver
     {
-        Task OnDataReceivedAsync(InvocationMessage invocation);
+        void GenHubProtocolReaderWriter(HubProtocolReaderWriter protocolReaderWriter);
     }
 }

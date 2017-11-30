@@ -20,15 +20,8 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
         public async void BuildServiceHub<THub>(string path) where THub : ServiceHub
         {
             ServiceHubEndPoint<THub> endPoint = this.ApplicationServices.GetRequiredService<ServiceHubEndPoint<THub>>();
-            try
-            {
-                endPoint.UseHub(path);
-                await endPoint.StartAsync();
-            }
-            catch (Exception e)
-            {
-                e.ToString();
-            }
+            endPoint.UseHub(path);
+            await endPoint.StartAsync();
         }
     }
 }

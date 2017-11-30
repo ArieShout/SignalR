@@ -29,11 +29,10 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton(typeof(NewHubEndPoint<>), typeof(NewHubEndPoint<>));
             services.AddSingleton(typeof(IUserIdProvider), typeof(DefaultUserIdProvider));
             */
-            
             services.AddSingleton(typeof(ServiceHubLifetimeMgr<>), typeof(DefaultServiceHubLifetimeMgr<>));
             services.AddSingleton(typeof(IServiceHubContext<>), typeof(ServiceHubContext<>));
             services.AddSingleton(typeof(ServiceHubEndPoint<>), typeof(ServiceHubEndPoint<>));
-            services.AddSingleton(typeof(IHubActivator<>), typeof(DefaultHubActivator<>));
+            services.AddScoped(typeof(IHubActivator<>), typeof(DefaultHubActivator<>));
             services.AddAuthorization();
 
             return new SignalRServiceBuilder(services);
