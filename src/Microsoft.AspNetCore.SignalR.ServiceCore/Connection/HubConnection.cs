@@ -19,8 +19,6 @@ using Microsoft.AspNetCore.Sockets.Features;
 using Microsoft.AspNetCore.Sockets.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.AspNetCore.SignalR.ServiceCore.Connection;
-using Microsoft.AspNetCore.SignalR.ServiceCore;
 
 namespace Microsoft.AspNetCore.SignalR.Client
 {
@@ -69,25 +67,21 @@ namespace Microsoft.AspNetCore.SignalR.Client
 
         public IConnection Connection => _connection;
 
-        public async Task SendHubMessage(HubInvocationMessage hubMessage, CancellationToken cancellationToken = default)
+        public async Task SendHubMessage(HubInvocationMessage hubMessage)
         {
-            //var irq = InvocationRequest.Invoke(cancellationToken, typeof(object), GetNextId(), _loggerFactory, this, out var task);
             try
             {
                 var payload = _protocolReaderWriter.WriteMessage(hubMessage);
                 _logger.SendInvocation(hubMessage.InvocationId);
 
-                //await _connection.SendAsync(payload, irq.CancellationToken);
-                await _connection.SendAsync(payload, cancellationToken);
+                await _connection.SendAsync(payload, default);
                 _logger.SendInvocationCompleted(hubMessage.InvocationId);
             }
             catch (Exception ex)
             {
                 _logger.SendInvocationFailed(hubMessage.InvocationId, ex);
-                //irq.Fail(ex);
                 TryRemoveInvocation(hubMessage.InvocationId, out _);
             }
-            //return await task;
         }
 
         public IDisposable On(string methodName, Type[] parameterTypes, Func<object[], object, Task> handler, object state)
@@ -116,7 +110,6 @@ namespace Microsoft.AspNetCore.SignalR.Client
                 _startCalled = true;
             }
         }
-
         private async Task StartAsyncCore()
         {
             var transferModeFeature = _connection.Features.Get<ITransferModeFeature>();
@@ -136,12 +129,6 @@ namespace Microsoft.AspNetCore.SignalR.Client
             var actualTransferMode = transferModeFeature.TransferMode;
 
             _protocolReaderWriter = new HubProtocolReaderWriter(_protocol, GetDataEncoder(requestedTransferMode, actualTransferMode));
-            /*
-            if (_receiver != null)
-            {
-                _receiver.GenHubProtocolReaderWriter(_protocolReaderWriter);
-            }
-            */
             _logger.HubProtocol(_protocol.Name);
 
             using (var memoryStream = new MemoryStream())
@@ -284,24 +271,7 @@ namespace Microsoft.AspNetCore.SignalR.Client
             // We don't need to wait for this to complete. It will signal back to the invocation request.
             return SendHubMessage(invocationMessage, irq);
         }
-
-        private async Task SendHubMessage(HubInvocationMessage hubMessage)
-        {
-            try
-            {
-                var payload = _protocolReaderWriter.WriteMessage(hubMessage);
-                _logger.SendInvocation(hubMessage.InvocationId);
-
-                await _connection.SendAsync(payload, default);
-                _logger.SendInvocationCompleted(hubMessage.InvocationId);
-            }
-            catch (Exception ex)
-            {
-                _logger.SendInvocationFailed(hubMessage.InvocationId, ex);
-                TryRemoveInvocation(hubMessage.InvocationId, out _);
-            }
-        }
-
+        
         private async Task SendHubMessage(HubInvocationMessage hubMessage, InvocationRequest irq)
         {
             try
