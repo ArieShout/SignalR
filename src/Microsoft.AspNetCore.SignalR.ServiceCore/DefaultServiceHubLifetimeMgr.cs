@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.ServiceCore.API;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
+using System.Linq;
 
 namespace Microsoft.AspNetCore.SignalR.ServiceCore
 {
@@ -28,12 +29,26 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
 
         public override Task InvokeAllExceptAsync(string methodName, object[] args, IReadOnlyList<string> excludedIds)
         {
-            throw new NotImplementedException();
+            return InvokeAllWhere(methodName, args, connection =>
+            {
+                return !excludedIds.Contains(connection.ConnectionId);
+            });
         }
 
         public override Task InvokeConnectionAsync(string connectionId, string methodName, object[] args)
         {
-            throw new NotImplementedException();
+            if (connectionId == null)
+            {
+                throw new ArgumentNullException(nameof(connectionId));
+            }
+
+            var connection = _connections[connectionId];
+
+            if (connection == null)
+            {
+                return Task.CompletedTask;
+            }
+            return WriteAsync(connection, methodName, args);
         }
 
         public override Task InvokeGroupAsync(string groupName, string methodName, object[] args)
