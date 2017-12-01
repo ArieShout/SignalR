@@ -44,11 +44,11 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             _hubContext = hubContext;
             DiscoverHubMethods();
         }
-        public void UseHub(string path)
+        public void UseHub(string path, LogLevel logLevel = LogLevel.Information)
         {
             _hubConnection = new HubConnectionBuilder()
                                 .WithHubBinder(this)
-                                .WithConsoleLogger(LogLevel.Trace) // Debug purpose
+                                .WithConsoleLogger(logLevel) // Debug purpose
                                 .WithUrl(path)
                                 .Build();
             _hubConnection.On<HubMethodInvocationMessage>(OnClientConnectedMethod, async (invocationMessage) =>
