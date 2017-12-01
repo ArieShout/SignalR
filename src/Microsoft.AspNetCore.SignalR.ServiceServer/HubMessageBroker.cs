@@ -94,7 +94,7 @@ namespace Microsoft.AspNetCore.SignalR
             {
                 await serverHubManager.OnDisconnectedAsync(context);
             }
-            _router.OnServerConnected(hubName, context);
+            _router.OnServerDisconnected(hubName, context);
             // TODO: Disconnect all client connections routing to this server
         }
 
