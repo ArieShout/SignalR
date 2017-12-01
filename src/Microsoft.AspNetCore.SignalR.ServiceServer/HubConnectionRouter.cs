@@ -16,7 +16,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceServer
         // TODO: Using least connection routing right now. Should support multiple routing method in the future.
         public async Task OnClientConnected(string hubName, HubConnectionContext connection)
         {
-            if (connection.GetTargetConnectionId() == null) return;
+            if (connection.GetTargetConnectionId() != null) return;
             if (!_connectionStatus.TryGetValue(hubName, out var hubConnectionStatus)) return;
             var targetConnId = hubConnectionStatus.Aggregate((l, r) => l.Value < r.Value ? l : r).Key;
             connection.AddTargetConnectionId(targetConnId);

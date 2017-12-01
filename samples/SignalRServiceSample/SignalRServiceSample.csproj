@@ -10,7 +10,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Microsoft.AspNetCore.SignalR.ServiceServer\Microsoft.AspNetCore.SignalR.ServiceServer.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.AspNetCore.SignalR\Microsoft.AspNetCore.SignalR.csproj" />
-    <ProjectReference Include="..\..\src\Microsoft.AspNetCore.SignalR.Redis\Microsoft.AspNetCore.SignalR.Redis.csproj" />
   </ItemGroup>
 
   <ItemGroup>
