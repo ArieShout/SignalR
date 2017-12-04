@@ -97,6 +97,18 @@ namespace Microsoft.AspNetCore.SignalR.Redis
             SubscribeToInternalServerName();
         }
 
+        public override Task SendMessageAsync(string connectionId, HubInvocationMessage message)
+        {
+            if (connectionId == null)
+            {
+                throw new ArgumentNullException(nameof(connectionId));
+            }
+
+            var connection = _connections[connectionId];
+
+            return connection != null ? WriteAsync(connection, message) : PublishAsync(_channelNamePrefix + "." + connectionId, message);
+        }
+
         public override Task OnConnectedAsync(HubConnectionContext connection)
         {
             var feature = new RedisFeature();
@@ -178,12 +190,7 @@ namespace Microsoft.AspNetCore.SignalR.Redis
             // If the connection is local we can skip sending the message through the bus since we require sticky connections.
             // This also saves serializing and deserializing the message!
             var connection = _connections[connectionId];
-            if (connection != null)
-            {
-                return WriteAsync(connection, message);
-            }
-
-            return PublishAsync(_channelNamePrefix + "." + connectionId, message);
+            return connection != null ? WriteAsync(connection, message) : PublishAsync(_channelNamePrefix + "." + connectionId, message);
         }
 
         public override Task InvokeGroupAsync(string groupName, string methodName, object[] args)
@@ -311,8 +318,7 @@ namespace Microsoft.AspNetCore.SignalR.Redis
         {
             var groupChannel = _channelNamePrefix + ".group." + groupName;
 
-            GroupData group;
-            if (!_groups.TryGetValue(groupChannel, out group))
+            if (!_groups.TryGetValue(groupChannel, out var group))
             {
                 return;
             }

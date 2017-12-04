@@ -172,7 +172,7 @@ namespace Microsoft.AspNetCore.SignalR
             });
         }
 
-        public Task SendMessageAsync(string connectionId, HubInvocationMessage message)
+        public virtual Task SendMessageAsync(string connectionId, HubInvocationMessage message)
         {
             if (connectionId == null)
             {

@@ -20,8 +20,9 @@ namespace Microsoft.AspNetCore.SignalR.ServiceServer
             if (!_connectionStatus.TryGetValue(hubName, out var hubConnectionStatus)) return;
             var targetConnId = hubConnectionStatus.Aggregate((l, r) => l.Value < r.Value ? l : r).Key;
             connection.AddTargetConnectionId(targetConnId);
-            hubConnectionStatus.TryUpdate(targetConnId, c => c + 1);
             await Task.CompletedTask;
+
+            hubConnectionStatus.TryUpdate(targetConnId, c => c + 1);
         }
 
         public async Task OnClientDisconnected(string hubName, HubConnectionContext connection)
@@ -29,8 +30,9 @@ namespace Microsoft.AspNetCore.SignalR.ServiceServer
             var targetConnId = connection.GetTargetConnectionId();
             if (targetConnId == null) return;
             if (!_connectionStatus.TryGetValue(hubName, out var hubConnectionStatus)) return;
-            hubConnectionStatus.TryUpdate(targetConnId, c => c > 0 ? c - 1 : 0);
             await Task.CompletedTask;
+
+            hubConnectionStatus.TryUpdate(targetConnId, c => c > 0 ? c - 1 : 0);
         }
 
         public void OnServerConnected(string hubName, HubConnectionContext connection)

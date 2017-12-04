@@ -40,6 +40,10 @@ namespace Microsoft.AspNetCore.SignalR
             // Don't wait for its completion
             _ = _router.OnClientConnected(hubName, context);
 
+            // When scaling out with Redis, it is possible that no server connection is connected to current instance.
+            // So we need to create a ServerHubLifetimeManager to send the message to Redis.
+            AssureServerHubLifetimeManager(hubName);
+
             // Invoke OnConnectedAsync on server
             await PassThruClientMessage(hubName, context,
                 new InvocationMessage(Guid.NewGuid().ToString(), true, OnConnectedMethodName, null, new object[0]));
@@ -53,7 +57,7 @@ namespace Microsoft.AspNetCore.SignalR
                 await clientHubManager.OnDisconnectedAsync(context);
             }
 
-            // Don't wait for it completion
+            // Don't wait for its completion
             _ = _router.OnClientDisconnected(hubName, context);
 
             // Invoke OnDiconnectedAsync on server
@@ -70,8 +74,7 @@ namespace Microsoft.AspNetCore.SignalR
                 throw new Exception("No assigned server.");
             }
 
-            var serverHubManager = _serverHubManagerDict[hubName];
-            if (serverHubManager != null)
+            if (_serverHubManagerDict.TryGetValue(hubName, out var serverHubManager))
             {
                 // Add original connection Id to message metadata
                 message.Metadata.Add(ConnectionIdKeyName, context.ConnectionId);
@@ -89,12 +92,15 @@ namespace Microsoft.AspNetCore.SignalR
             var serverHubManager = _serverHubManagerDict.GetOrAdd(hubName, _hubLifetimeManagerFactory.Create<ServerHub>(hubName));
             await serverHubManager.OnConnectedAsync(context);
             _router.OnServerConnected(hubName, context);
+
+            // When scaling out with Redis, it is possible that no client connection is connected to current instance.
+            // So we need to create a HubLifetimeManager to send messages to Redis.
+            AssureClientHubLifetimeManager(hubName);
         }
 
         public async Task OnServerDisconnectedAsync(string hubName, HubConnectionContext context)
         {
-            var serverHubManager = _serverHubManagerDict[hubName];
-            if (serverHubManager != null)
+            if (_serverHubManagerDict.TryGetValue(hubName, out var serverHubManager))
             {
                 await serverHubManager.OnDisconnectedAsync(context);
             }
@@ -104,8 +110,7 @@ namespace Microsoft.AspNetCore.SignalR
 
         public async Task PassThruServerMessage(string hubName, HubConnectionContext context, HubMethodInvocationMessage message)
         {
-            var clientHubManager = _clientHubManagerDict[hubName];
-            if (clientHubManager != null)
+            if (_clientHubManagerDict.TryGetValue(hubName, out var clientHubManager))
             {
                 // Invoke a single connection
                 if (message.TryGetProperty(ConnectionIdKeyName, out var connectionId))
@@ -135,8 +140,7 @@ namespace Microsoft.AspNetCore.SignalR
 
         public async Task PassThruServerMessage(string hubName, HubConnectionContext context, CompletionMessage message)
         {
-            var clientHubManager = _clientHubManagerDict[hubName];
-            if (clientHubManager != null)
+            if (_clientHubManagerDict.TryGetValue(hubName, out var clientHubManager))
             {
                 if (message.TryGetProperty(ConnectionIdKeyName, out var connectionId))
                 {
@@ -153,6 +157,22 @@ namespace Microsoft.AspNetCore.SignalR
         private bool IsServerConnectionAlive(string connectionId)
         {
             return !string.IsNullOrEmpty(connectionId);
+        }
+
+        private void AssureServerHubLifetimeManager(string hubName)
+        {
+            // ConcurrentDictionary.TryGetValue is lock free
+            if (_serverHubManagerDict.TryGetValue(hubName, out _)) return;
+            // TODO: Possible error handling
+            _serverHubManagerDict.TryAdd(hubName, _hubLifetimeManagerFactory.Create<ServerHub>(hubName));
+        }
+
+        private void AssureClientHubLifetimeManager(string hubName)
+        {
+            // ConcurrentDictionary.TryGetValue is lock free
+            if (_clientHubManagerDict.TryGetValue(hubName, out _)) return;
+            // TODO: Possible error handling
+            _clientHubManagerDict.TryAdd(hubName, _hubLifetimeManagerFactory.Create<ClientHub>(hubName));
         }
 
         #endregion
