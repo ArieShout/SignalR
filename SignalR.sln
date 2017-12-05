@@ -95,7 +95,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JwtClientSample", "samples\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.AspNetCore.SignalR.ServiceCore", "src\Microsoft.AspNetCore.SignalR.ServiceCore\Microsoft.AspNetCore.SignalR.ServiceCore.csproj", "{0CB3D3BE-E64D-477D-A2A3-7610F75D0CCE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.AspNetCore.SignalR.Service.Server", "src\Microsoft.AspNetCore.SignalR.ServiceServer\Microsoft.AspNetCore.SignalR.Service.Server.csproj", "{CC39E8FD-69C0-40E5-8EDD-EBE72AB5B371}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.AspNetCore.SignalR.Service.Server", "src\Microsoft.AspNetCore.SignalR.Service.Server\Microsoft.AspNetCore.SignalR.Service.Server.csproj", "{CC39E8FD-69C0-40E5-8EDD-EBE72AB5B371}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SignalRServiceSample", "samples\SignalRServiceSample\SignalRServiceSample.csproj", "{7B7A7D95-19D3-44E6-87BC-214538938ABF}"
 EndProject

@@ -2,11 +2,12 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.AspNetCore.SignalR.Internal;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
-namespace Microsoft.AspNetCore.SignalR.Internal
+namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
     public class ServiceHubProtocolResolver : IHubProtocolResolver
     {
@@ -23,8 +24,8 @@ namespace Microsoft.AspNetCore.SignalR.Internal
             {
                 case "json":
                     return new JsonHubProtocol2(JsonSerializer.Create(_options.Value.JsonSerializerSettings));
-                case "messagepack":
-                    return new MessagePackHubProtocol(_options.Value.MessagePackSerializationContext);
+                //case "messagepack":
+                //    return new MessagePackHubProtocol(_options.Value.MessagePackSerializationContext);
                 default:
                     throw new NotSupportedException($"The protocol '{protocolName ?? "(null)"}' is not supported.");
             }

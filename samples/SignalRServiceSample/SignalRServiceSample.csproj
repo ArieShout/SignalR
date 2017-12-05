@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Microsoft.AspNetCore.SignalR.ServiceServer\Microsoft.AspNetCore.SignalR.Service.Server.csproj" />
+    <ProjectReference Include="..\..\src\Microsoft.AspNetCore.SignalR.Service.Server\Microsoft.AspNetCore.SignalR.Service.Server.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.AspNetCore.SignalR\Microsoft.AspNetCore.SignalR.csproj" />
   </ItemGroup>
 

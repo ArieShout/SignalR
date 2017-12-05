@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using Microsoft.AspNetCore.SignalR.Internal.Formatters;
-using Microsoft.AspNetCore.SignalR.Service.Server;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
