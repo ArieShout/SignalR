@@ -8,6 +8,23 @@ using System.Threading.Tasks;
 
 namespace Microsoft.AspNetCore.SignalR.ServiceCore.API
 {
+    public class ServiceGroupProxy<THub> : IServiceClientProxy
+    {
+        private readonly string _groupName;
+        private readonly ServiceHubLifetimeMgr<THub> _lifetimeManager;
+
+        public ServiceGroupProxy(ServiceHubLifetimeMgr<THub> lifetimeManager, string groupName)
+        {
+            _lifetimeManager = lifetimeManager;
+            _groupName = groupName;
+        }
+
+        public Task InvokeAsync(string method, params object[] args)
+        {
+            return _lifetimeManager.InvokeGroupAsync(_groupName, method, args);
+        }
+    }
+
     public class AllServiceClientProxy<THub> : IServiceClientProxy
     {
         private readonly ServiceHubLifetimeMgr<THub> _lifetimeMgr;
@@ -50,6 +67,26 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore.API
         public Task InvokeAsync(string method, params object[] args)
         {
             return _lifetimeMgr.InvokeAllExceptAsync(method, args, _excludedIds);
+        }
+    }
+
+    public class GroupManager<THub> : IServiceGroupManager
+    {
+        private readonly ServiceHubLifetimeMgr<THub> _lifetimeManager;
+
+        public GroupManager(ServiceHubLifetimeMgr<THub> lifetimeManager)
+        {
+            _lifetimeManager = lifetimeManager;
+        }
+
+        public Task AddAsync(string connectionId, string groupName)
+        {
+            return _lifetimeManager.AddGroupAsync(connectionId, groupName);
+        }
+
+        public Task RemoveAsync(string connectionId, string groupName)
+        {
+            return _lifetimeManager.RemoveGroupAsync(connectionId, groupName);
         }
     }
 }

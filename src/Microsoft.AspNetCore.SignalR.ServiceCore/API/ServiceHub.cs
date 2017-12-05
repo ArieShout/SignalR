@@ -13,6 +13,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore.API
         private bool _disposed;
         private IServiceHubClients _clients;
         private ServiceHubCallerContext _context;
+        private IServiceGroupManager _groups;
         public IServiceHubClients Clients
         {
             get
@@ -38,6 +39,20 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore.API
             {
                 CheckDisposed();
                 _context = value;
+            }
+        }
+
+        public IServiceGroupManager Groups
+        {
+            get
+            {
+                CheckDisposed();
+                return _groups;
+            }
+            set
+            {
+                CheckDisposed();
+                _groups = value;
             }
         }
 

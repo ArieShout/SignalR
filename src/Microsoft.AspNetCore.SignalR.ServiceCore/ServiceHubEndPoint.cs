@@ -220,6 +220,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
         {
             hub.Clients = _hubContext.Clients;
             hub.Context = new ServiceHubCallerContext(hubConnection);
+            hub.Groups = _hubContext.Groups;
         }
 
         private async Task<bool> IsHubMethodAuthorized(IServiceProvider provider, ClaimsPrincipal principal, IList<IAuthorizeData> policies)

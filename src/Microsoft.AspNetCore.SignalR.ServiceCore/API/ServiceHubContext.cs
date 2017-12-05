@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Microsoft.AspNetCore.SignalR.ServiceCore.API
 {
@@ -14,11 +13,14 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore.API
         {
             _lifetimeMgr = lifetimeMgr;
             All = new AllServiceClientProxy<THub>(lifetimeMgr);
+            Groups = new GroupManager<THub>(lifetimeMgr);
         }
         IServiceHubClients IServiceHubContext<THub>.Clients => this;
 
         public virtual IServiceClientProxy All { get; }
-        
+
+        public IServiceGroupManager Groups { get; }
+
         public virtual IServiceClientProxy AllExcept(IReadOnlyList<string> excludedIds)
         {
             return new AllServiceClientsExceptProxy<THub>(_lifetimeMgr, excludedIds);
@@ -31,7 +33,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore.API
 
         public virtual IServiceClientProxy Group(string groupName)
         {
-            throw new NotImplementedException();
+            return new ServiceGroupProxy<THub>(_lifetimeMgr, groupName);
         }
 
         public virtual IServiceClientProxy User(string userId)

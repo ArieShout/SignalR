@@ -14,12 +14,30 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
     public class DefaultServiceHubLifetimeMgr<THub> : ServiceHubLifetimeMgr<THub>
     {
         private readonly ServiceHubConnectionList _connections = new ServiceHubConnectionList();
-
+        private readonly ServiceHubGroupList _groups = new ServiceHubGroupList();
         public override ServiceHubConnectionList Connections => _connections;
 
         public override Task AddGroupAsync(string connectionId, string groupName)
         {
-            throw new NotImplementedException();
+            if (connectionId == null)
+            {
+                throw new ArgumentNullException(nameof(connectionId));
+            }
+
+            if (groupName == null)
+            {
+                throw new ArgumentNullException(nameof(groupName));
+            }
+
+            var connection = _connections[connectionId];
+            if (connection == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            _groups.Add(connection, groupName);
+
+            return Task.CompletedTask;
         }
 
         public override Task InvokeAllAsync(string methodName, object[] args)
@@ -53,7 +71,19 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
 
         public override Task InvokeGroupAsync(string groupName, string methodName, object[] args)
         {
-            throw new NotImplementedException();
+            if (groupName == null)
+            {
+                throw new ArgumentNullException(nameof(groupName));
+            }
+
+            var group = _groups[groupName];
+            if (group != null)
+            {
+                var tasks = group.Values.Select(c => WriteAsync(c, methodName, args));
+                return Task.WhenAll(tasks);
+            }
+
+            return Task.CompletedTask;
         }
 
         public override Task InvokeUserAsync(string userId, string methodName, object[] args)
@@ -75,7 +105,25 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
 
         public override Task RemoveGroupAsync(string connectionId, string groupName)
         {
-            throw new NotImplementedException();
+            if (connectionId == null)
+            {
+                throw new ArgumentNullException(nameof(connectionId));
+            }
+
+            if (groupName == null)
+            {
+                throw new ArgumentNullException(nameof(groupName));
+            }
+
+            var connection = _connections[connectionId];
+            if (connection == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            _groups.Remove(connectionId, groupName);
+
+            return Task.CompletedTask;
         }
 
         private Task InvokeAllWhere(string methodName, object[] args, Func<ServiceHubConnectionContext, bool> include)
