@@ -32,7 +32,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         public async Task OnClientConnectedAsync(string hubName, HubConnectionContext context)
         {
-            var clientHubManager = _clientHubManagerDict.GetOrAdd(hubName, _hubLifetimeManagerFactory.Create<ClientHub>(hubName));
+            var clientHubManager = GetOrAddClientHubManager(hubName);
             await clientHubManager.OnConnectedAsync(context);
 
             // Assign client connection to a server connection
@@ -41,7 +41,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
             // When scaling out with Redis, it is possible that no server connection is connected to current instance.
             // So we need to create a ServerHubLifetimeManager to send the message to Redis.
-            AssureServerHubLifetimeManager(hubName);
+            GetOrAddServerHubManager(hubName);
 
             // Invoke OnConnectedAsync on server
             await PassThruClientMessage(hubName, context,
@@ -76,7 +76,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             if (_serverHubManagerDict.TryGetValue(hubName, out var serverHubManager))
             {
                 // Add original connection Id to message metadata
-                message.Metadata.Add(ConnectionIdKeyName, context.ConnectionId);
+                message.AddMetadata(ConnectionIdKeyName, context.ConnectionId);
 
                 await ((DefaultHubLifetimeManager<ServerHub>)serverHubManager).SendMessageAsync(targetConnId, message);
             }
@@ -88,13 +88,13 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         public async Task OnServerConnectedAsync(string hubName, HubConnectionContext context)
         {
-            var serverHubManager = _serverHubManagerDict.GetOrAdd(hubName, _hubLifetimeManagerFactory.Create<ServerHub>(hubName));
+            var serverHubManager = GetOrAddServerHubManager(hubName);
             await serverHubManager.OnConnectedAsync(context);
             _router.OnServerConnected(hubName, context);
 
             // When scaling out with Redis, it is possible that no client connection is connected to current instance.
             // So we need to create a HubLifetimeManager to send messages to Redis.
-            AssureClientHubLifetimeManager(hubName);
+            GetOrAddClientHubManager(hubName);
         }
 
         public async Task OnServerDisconnectedAsync(string hubName, HubConnectionContext context)
@@ -158,20 +158,15 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             return !string.IsNullOrEmpty(connectionId);
         }
 
-        private void AssureServerHubLifetimeManager(string hubName)
+        private HubLifetimeManager<ServerHub> GetOrAddServerHubManager(string hubName)
         {
             // ConcurrentDictionary.TryGetValue is lock free
-            if (_serverHubManagerDict.TryGetValue(hubName, out _)) return;
-            // TODO: Possible error handling
-            _serverHubManagerDict.TryAdd(hubName, _hubLifetimeManagerFactory.Create<ServerHub>(hubName));
+            return _serverHubManagerDict.GetOrAdd(hubName, _ => _hubLifetimeManagerFactory.Create<ServerHub>($"server.{hubName}"));
         }
 
-        private void AssureClientHubLifetimeManager(string hubName)
+        private HubLifetimeManager<ClientHub> GetOrAddClientHubManager(string hubName)
         {
-            // ConcurrentDictionary.TryGetValue is lock free
-            if (_clientHubManagerDict.TryGetValue(hubName, out _)) return;
-            // TODO: Possible error handling
-            _clientHubManagerDict.TryAdd(hubName, _hubLifetimeManagerFactory.Create<ClientHub>(hubName));
+            return _clientHubManagerDict.GetOrAdd(hubName, _ => _hubLifetimeManagerFactory.Create<ClientHub>($"client.{hubName}"));
         }
 
         #endregion

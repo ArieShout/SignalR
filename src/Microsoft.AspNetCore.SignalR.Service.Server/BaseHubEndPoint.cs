@@ -285,16 +285,6 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         #endregion
 
-        //Type IInvocationBinder.GetReturnType(string invocationId)
-        //{
-        //    return typeof(object);
-        //}
-
-        //Type[] IInvocationBinder.GetParameterTypes(string methodName)
-        //{
-        //    return null;
-        //}
-
         #region Abstract Methods
 
         protected abstract Task OnHubConnectedAsync(string hubName, ServiceHubConnectionContext connection);
