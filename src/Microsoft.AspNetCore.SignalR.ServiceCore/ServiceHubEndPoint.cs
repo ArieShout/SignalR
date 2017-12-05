@@ -15,28 +15,27 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.SignalR.Internal;
 using Microsoft.AspNetCore.SignalR.ServiceCore.Internal;
-using Microsoft.AspNetCore.SignalR.ServiceCore.API;
 using Microsoft.AspNetCore.SignalR.ServiceCore.Connection;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using System.Security.Claims;
 
 namespace Microsoft.AspNetCore.SignalR.ServiceCore
 {
-    public class ServiceHubEndPoint<THub> : IInvocationBinder, IServiceHubReceiver where THub : ServiceHub
+    public class ServiceHubEndPoint<THub> : IInvocationBinder, IServiceHubReceiver where THub : Hub
     {
         private static readonly string OnClientConnectedMethod = "OnConnectedAsync";
         private static readonly string OnDisconnectedAsyncMethod = "OnDisconnectedAsync";
         private readonly ILogger<ServiceHubEndPoint<THub>> _logger;
-        private readonly ServiceHubLifetimeMgr<THub> _lifetimeMgr;
+        private readonly HubLifetimeManager<THub> _lifetimeMgr;
         private HubConnection _hubConnection;
-        private readonly IServiceHubContext<THub> _hubContext;
+        private readonly IHubContext<THub> _hubContext;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private HubProtocolReaderWriter _protocolReaderWriter;
         private readonly Dictionary<string, HubMethodDescriptor> _methods = new Dictionary<string, HubMethodDescriptor>(StringComparer.OrdinalIgnoreCase);
-        public ServiceHubEndPoint(ServiceHubLifetimeMgr<THub> lifetimeMgr,
+        public ServiceHubEndPoint(HubLifetimeManager<THub> lifetimeMgr,
             ILogger<ServiceHubEndPoint<THub>> logger,
             IServiceScopeFactory serviceScopeFactory,
-            IServiceHubContext<THub> hubContext)
+            IHubContext<THub> hubContext)
         {
             _lifetimeMgr = lifetimeMgr;
             _serviceScopeFactory = serviceScopeFactory;
@@ -128,7 +127,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             }
         }
 
-        private async Task HubOnDisconnectedAsync(ServiceHubConnectionContext connection)
+        private async Task HubOnDisconnectedAsync(HubConnectionContext connection)
         {
             try
             {
@@ -139,7 +138,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
                     try
                     {
                         InitializeHub(hub, connection);
-                        await hub.OnDisconnectedAsync();
+                        await hub.OnDisconnectedAsync(null);
                     }
                     finally
                     {
@@ -167,7 +166,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
         private async Task HandleOnDisconnectedAsync(HubMethodInvocationMessage hubMethodInvocationMessage)
         {
             var connectionId = hubMethodInvocationMessage.GetConnectionId();
-            ServiceHubConnectionContext serviceHubConnCtx = _lifetimeMgr.Connections[connectionId];
+            HubConnectionContext serviceHubConnCtx = _lifetimeMgr.Connections[connectionId];
             await _lifetimeMgr.OnDisconnectedAsync(serviceHubConnCtx);
             await HubOnDisconnectedAsync(serviceHubConnCtx);
             await SendMessageAsync(CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, ""));
@@ -178,7 +177,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             try
             {
                 var connectionId = hubMethodInvocationMessage.GetConnectionId();
-                ServiceHubConnectionContext serviceHubConnCtx = _lifetimeMgr.Connections[connectionId];
+                HubConnectionContext serviceHubConnCtx = _lifetimeMgr.Connections[connectionId];
                 if (!_methods.TryGetValue(hubMethodInvocationMessage.Target, out var descriptor))
                 {
                     // Send an error to the client. Then let the normal completion process occur
@@ -216,10 +215,10 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             await SendMessageAsync(CompletionMessage.WithError(hubMethodInvocationMessage.InvocationId, errorMessage));
         }
 
-        private void InitializeHub(THub hub, ServiceHubConnectionContext hubConnection)
+        private void InitializeHub(THub hub, HubConnectionContext hubConnection)
         {
             hub.Clients = _hubContext.Clients;
-            hub.Context = new ServiceHubCallerContext(hubConnection);
+            hub.Context = new HubCallerContext(hubConnection);
             hub.Groups = _hubContext.Groups;
         }
 
@@ -339,7 +338,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             }
         }
         */
-        private async Task Invoke(HubMethodDescriptor descriptor, ServiceHubConnectionContext connection,
+        private async Task Invoke(HubMethodDescriptor descriptor, HubConnectionContext connection,
             HubMethodInvocationMessage hubMethodInvocationMessage, bool isStreamedInvocation)
         {
             var methodExecutor = descriptor.MethodExecutor;
@@ -490,7 +489,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             }
 
             var baseType = baseDefinition.GetTypeInfo().IsGenericType ? baseDefinition.GetGenericTypeDefinition() : baseDefinition;
-            return typeof(ServiceHub) != baseType;
+            return typeof(Hub) != baseType;
         }
     }    
 }

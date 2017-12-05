@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.SignalR.Internal.Formatters;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using System.Linq;
 
 namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 {
@@ -17,6 +18,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private const string ResultPropertyName = "result";
         private const string ItemPropertyName = "item";
         private const string InvocationIdPropertyName = "invocationId";
+        private const string MetadataPropertyName = "meta";
         private const string TypePropertyName = "type";
         private const string ErrorPropertyName = "error";
         private const string TargetPropertyName = "target";
@@ -56,9 +58,11 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
         public ProtocolType Type => ProtocolType.Text;
 
+        public bool TryParseMessages(
 #pragma warning disable 618
-        public bool TryParseMessages(ReadOnlySpan<byte> input, IInvocationBinder binder, out IList<HubMessage> messages)
+            ReadOnlySpan<byte> input,
 #pragma warning restore 618
+            IInvocationBinder binder, out IList<HubMessage> messages)
         {
             messages = new List<HubMessage>();
 
@@ -243,7 +247,20 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         {
             writer.WritePropertyName(InvocationIdPropertyName);
             writer.WriteValue(message.InvocationId);
+            WriteHubInvocationMessageMeta(message, writer);
             WriteMessageType(writer, type);
+        }
+
+        private static void WriteHubInvocationMessageMeta(HubInvocationMessage message, JsonTextWriter writer)
+        {
+            writer.WritePropertyName(MetadataPropertyName);
+            writer.WriteStartObject();
+            foreach (var kvp in message.Metadata)
+            {
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteValue(kvp.Value);
+            }
+            writer.WriteEndObject();
         }
 
         private static void WriteMessageType(JsonTextWriter writer, int type)
@@ -252,9 +269,16 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             writer.WriteValue(type);
         }
 
+        private static IDictionary<string, string> GetMetedata(JObject json)
+        {
+            IDictionary<string, JToken> metadata = (JObject)json[MetadataPropertyName];
+            return metadata == null ? new Dictionary<string, string>() : metadata.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString());
+        }
+
         private InvocationMessage BindInvocationMessage(JObject json, IInvocationBinder binder)
         {
             var invocationId = JsonUtils.GetRequiredProperty<string>(json, InvocationIdPropertyName, JTokenType.String);
+            var metadata = GetMetedata(json);
             var target = JsonUtils.GetRequiredProperty<string>(json, TargetPropertyName, JTokenType.String);
             var nonBlocking = JsonUtils.GetOptionalProperty<bool>(json, NonBlockingPropertyName, JTokenType.Boolean);
 
@@ -265,11 +289,11 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             try
             {
                 var arguments = BindArguments(args, paramTypes);
-                return new InvocationMessage(invocationId, nonBlocking, target, argumentBindingException: null, arguments: arguments);
+                return new InvocationMessage(invocationId, nonBlocking, target, argumentBindingException: null, arguments: arguments).AddMetadata(metadata);
             }
             catch (Exception ex)
             {
-                return new InvocationMessage(invocationId, nonBlocking, target, ExceptionDispatchInfo.Capture(ex));
+                return new InvocationMessage(invocationId, nonBlocking, target, ExceptionDispatchInfo.Capture(ex)).AddMetadata(metadata);
             }
         }
 

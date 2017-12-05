@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.SignalR.ServiceCore.API;
+﻿using Microsoft.AspNetCore.SignalR;
 
 namespace MyChat
 {
-    public class ChatHub : ServiceHub
+    public class ChatHub : Hub
     {
         public void Send(string message)
         {

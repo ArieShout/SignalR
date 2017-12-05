@@ -5,18 +5,17 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR.ServiceCore.API;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using System.Linq;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Microsoft.AspNetCore.SignalR.ServiceCore
 {
-    public class DefaultServiceHubLifetimeMgr<THub> : ServiceHubLifetimeMgr<THub>
+    public class DefaultServiceHubLifetimeMgr<THub> : HubLifetimeManager<THub>
     {
-        private readonly ServiceHubConnectionList _connections = new ServiceHubConnectionList();
-        private readonly ServiceHubGroupList _groups = new ServiceHubGroupList();
-        public override ServiceHubConnectionList Connections => _connections;
-
+        private readonly HubConnectionList _connections = new HubConnectionList();
+        private readonly HubGroupList _groups = new HubGroupList();
+        public override HubConnectionList Connections => _connections;
         public override Task AddGroupAsync(string connectionId, string groupName)
         {
             if (connectionId == null)
@@ -91,13 +90,13 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             throw new NotImplementedException();
         }
 
-        public override Task OnConnectedAsync(ServiceHubConnectionContext connection)
+        public override Task OnConnectedAsync(HubConnectionContext connection)
         {
             _connections.Add(connection);
             return Task.CompletedTask;
         }
 
-        public override Task OnDisconnectedAsync(ServiceHubConnectionContext connection)
+        public override Task OnDisconnectedAsync(HubConnectionContext connection)
         {
             _connections.Remove(connection);
             return Task.CompletedTask;
@@ -126,7 +125,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             return Task.CompletedTask;
         }
 
-        private Task InvokeAllWhere(string methodName, object[] args, Func<ServiceHubConnectionContext, bool> include)
+        private Task InvokeAllWhere(string methodName, object[] args, Func<HubConnectionContext, bool> include)
         {
             var tasks = new List<Task>(_connections.Count);
             foreach (var connection in _connections)
@@ -141,9 +140,9 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             return Task.WhenAll(tasks);
         }
 
-        private async Task WriteAsync(ServiceHubConnectionContext connection, string methodName, object[] args)
+        private async Task WriteAsync(HubConnectionContext connection, string methodName, object[] args)
         {
-            await connection.InvokeAsync(methodName, args);
+            await ((ServiceHubConnectionContext)connection).InvokeAsync(methodName, args);
         }
     }
 }

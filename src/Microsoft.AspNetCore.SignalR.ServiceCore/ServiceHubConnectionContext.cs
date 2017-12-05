@@ -5,18 +5,19 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceCore.API
+namespace Microsoft.AspNetCore.SignalR.ServiceCore
 {
-    public class ServiceHubConnectionContext
+    public class ServiceHubConnectionContext : HubConnectionContext
     {
         private readonly ServiceConnectionContext _connectionContext;
         private readonly HubConnection _hubConnection;
         public ServiceHubConnectionContext(ServiceConnectionContext connectionContext, HubConnection hubConnection)
+            : base(null, null)
         {
             _connectionContext = connectionContext;
             _hubConnection = hubConnection;
         }
-        public virtual string ConnectionId => _connectionContext.ConnectionId;
+        public override string ConnectionId => _connectionContext.ConnectionId;
         public async Task InvokeAsync(string methodName, object[] args)
         {
             await _hubConnection.InvokeAsync(ConnectionId, methodName, args);

@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Sockets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.SignalR.ServiceCore.API;
 using Microsoft.AspNetCore.SignalR.ServiceCore;
 namespace MyChat
 {

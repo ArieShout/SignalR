@@ -5,7 +5,6 @@ using System;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.SignalR.ServiceCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.SignalR.ServiceCore.API;
 
 namespace Microsoft.AspNetCore.Builder
 {
