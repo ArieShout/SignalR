@@ -18,7 +18,7 @@ using StackExchange.Redis;
 
 namespace Microsoft.AspNetCore.SignalR.Redis
 {
-    public class RedisHubLifetimeManager2<THub> : HubLifetimeManager<THub>, IDisposable
+    public class RedisHubLifetimeManager2<THub> : DefaultHubLifetimeManager<THub>, IDisposable
     {
         private readonly HubConnectionList _connections = new HubConnectionList();
         // TODO: Investigate "memory leak" entries never get removed
@@ -27,7 +27,7 @@ namespace Microsoft.AspNetCore.SignalR.Redis
         private readonly ISubscriber _bus;
         private readonly ILogger _logger;
         private readonly RedisOptions2 _options;
-        private readonly string _channelNamePrefix = typeof(THub).FullName;
+        private readonly string _channelNamePrefix;
         private readonly string _serverName = Guid.NewGuid().ToString();
         private readonly AckHandler _ackHandler;
         private int _internalId;
@@ -44,14 +44,17 @@ namespace Microsoft.AspNetCore.SignalR.Redis
         private long _nextInvocationId = 0;
 
         public RedisHubLifetimeManager2(ILogger<RedisHubLifetimeManager2<THub>> logger,
-                                       IOptions<RedisOptions2> options)
+                                       RedisOptions2 options,
+                                       string hubName)
         {
+            _channelNamePrefix = hubName;
+
             _logger = logger;
-            _options = options.Value;
+            _options = options;
             _ackHandler = new AckHandler();
 
             var writer = new LoggerTextWriter(logger);
-            _logger.ConnectingToEndpoints(options.Value.Options.EndPoints);
+            _logger.ConnectingToEndpoints(options.Options.EndPoints);
             _redisServerConnection = _options.Connect(writer);
 
             _redisServerConnection.ConnectionRestored += (_, e) =>

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Microsoft.AspNetCore.SignalR.ServiceServer
 {
@@ -13,27 +14,23 @@ namespace Microsoft.AspNetCore.SignalR.ServiceServer
         }
 
         // TODO: Using least connection routing right now. Should support multiple routing method in the future.
-        public void OnClientConnected(string hubName, HubConnectionContext connection)
+        public async Task OnClientConnected(string hubName, HubConnectionContext connection)
         {
-            if (connection.Metadata.ContainsKey("TargetConnId")) return;
+            if (connection.GetTargetConnectionId() != null) return;
             if (!_connectionStatus.TryGetValue(hubName, out var hubConnectionStatus)) return;
-            var targetConnection = hubConnectionStatus.Aggregate((l, r) => l.Value < r.Value ? l : r);
-            connection.Metadata.Add("TargetConnId", targetConnection.Key);
-            // TODO: It is possible that below update will fail because of high volume of concurrent connections.
-            //       Need a more robust way to update connection count.
-            hubConnectionStatus.TryUpdate(targetConnection.Key, targetConnection.Value + 1, targetConnection.Value);
+            var targetConnId = hubConnectionStatus.Aggregate((l, r) => l.Value < r.Value ? l : r).Key;
+            connection.AddTargetConnectionId(targetConnId);
+            hubConnectionStatus.TryUpdate(targetConnId, c => c + 1);
+            await Task.CompletedTask;
         }
 
-        public void OnClientDisconnected(string hubName, HubConnectionContext connection)
+        public async Task OnClientDisconnected(string hubName, HubConnectionContext connection)
         {
-            if (!connection.Metadata.TryGetValue("TargetConnId", out var targetConnId)) return;
+            var targetConnId = connection.GetTargetConnectionId();
+            if (targetConnId == null) return;
             if (!_connectionStatus.TryGetValue(hubName, out var hubConnectionStatus)) return;
-            if (hubConnectionStatus.TryGetValue((string) targetConnId, out var connCnt))
-            {
-                // TODO: It is possible that below update will fail because of high volume of concurrent connections.
-                //       Need a more robust way to update connection count.
-                hubConnectionStatus.TryUpdate((string) targetConnId, connCnt > 0 ? connCnt - 1 : 0, connCnt);
-            }
+            hubConnectionStatus.TryUpdate(targetConnId, c => c > 0 ? c - 1 : 0);
+            await Task.CompletedTask;
         }
 
         public void OnServerConnected(string hubName, HubConnectionContext connection)
@@ -46,7 +43,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceServer
         {
             if (_connectionStatus.TryGetValue(hubName, out var hubConnectionStatus))
             {
-                hubConnectionStatus.TryRemove(connection.ConnectionId, out var value);
+                hubConnectionStatus.TryRemove(connection.ConnectionId, out _);
             }
         }
     }
