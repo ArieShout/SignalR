@@ -3,9 +3,8 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
-using Microsoft.AspNetCore.SignalR.ServiceServer;
 
-namespace Microsoft.AspNetCore.SignalR
+namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
     public class HubMessageBroker : IHubMessageBroker
     {

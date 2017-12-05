@@ -12,11 +12,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using Microsoft.AspNetCore.SignalR.Redis.Internal;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using StackExchange.Redis;
 
-namespace Microsoft.AspNetCore.SignalR.Redis
+namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
     public class RedisHubLifetimeManager2<THub> : DefaultHubLifetimeManager<THub>, IDisposable
     {

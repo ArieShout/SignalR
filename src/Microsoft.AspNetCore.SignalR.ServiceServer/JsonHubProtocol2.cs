@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using Microsoft.AspNetCore.SignalR.Internal.Formatters;
-using Microsoft.AspNetCore.SignalR.ServiceServer;
+using Microsoft.AspNetCore.SignalR.Service.Server;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -47,12 +47,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         /// <param name="payloadSerializer">The <see cref="JsonSerializer"/> to use to serialize application payloads (arguments, results, etc.).</param>
         public JsonHubProtocol2(JsonSerializer payloadSerializer)
         {
-            if (payloadSerializer == null)
-            {
-                throw new ArgumentNullException(nameof(payloadSerializer));
-            }
-
-            _payloadSerializer = payloadSerializer;
+            _payloadSerializer = payloadSerializer ?? throw new ArgumentNullException(nameof(payloadSerializer));
         }
 
         public string Name => "json";

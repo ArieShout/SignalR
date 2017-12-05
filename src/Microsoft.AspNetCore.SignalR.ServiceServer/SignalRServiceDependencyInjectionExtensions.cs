@@ -5,8 +5,7 @@ using System;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Core;
 using Microsoft.AspNetCore.SignalR.Internal;
-using Microsoft.AspNetCore.SignalR.Redis;
-using Microsoft.AspNetCore.SignalR.ServiceServer;
+using Microsoft.AspNetCore.SignalR.Service.Server;
 using Microsoft.AspNetCore.Sockets;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -37,7 +36,7 @@ namespace Microsoft.Extensions.DependencyInjection
         public static ISignalRBuilder AddSignalRCore2(this IServiceCollection services)
         {
             services.AddSingleton(typeof(HubLifetimeManager<>), typeof(DefaultHubLifetimeManager<>));
-            services.AddSingleton(typeof(IHubProtocolResolver), typeof(DefaultHubProtocolResolver2));
+            services.AddSingleton(typeof(IHubProtocolResolver), typeof(ServiceHubProtocolResolver));
             services.AddSingleton(typeof(IHubContext<>), typeof(HubContext<>));
             services.AddSingleton(typeof(IHubContext<,>), typeof(HubContext<,>));
             services.AddSingleton(typeof(HubEndPoint<ClientHub>), typeof(ClientHubEndPoint<ClientHub>));

@@ -1,4 +1,4 @@
-﻿namespace Microsoft.AspNetCore.SignalR.ServiceServer
+﻿namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
     public static class HubConnectionContextExtension
     {

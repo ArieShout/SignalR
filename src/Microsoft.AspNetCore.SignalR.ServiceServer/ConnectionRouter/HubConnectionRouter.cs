@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceServer
+namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
     public class HubConnectionRouter : IHubConnectionRouter
     {

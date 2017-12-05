@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceServer
+namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
     public interface IHubConnectionRouter
     {

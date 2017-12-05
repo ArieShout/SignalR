@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -10,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceServer
+namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
     public class RedisHubConnectionRouter : IHubConnectionRouter
     {

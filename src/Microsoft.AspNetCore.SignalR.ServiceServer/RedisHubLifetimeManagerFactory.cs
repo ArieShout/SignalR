@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.AspNetCore.SignalR.Redis;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceServer
+namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
     public class RedisHubLifetimeManagerFactory : IHubLifetimeManagerFactory
     {

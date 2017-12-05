@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceServer
+namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
     public static class ConcurrentDictionaryExtension
     {

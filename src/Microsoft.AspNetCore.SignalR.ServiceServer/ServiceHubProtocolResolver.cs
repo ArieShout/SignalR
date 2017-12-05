@@ -8,11 +8,11 @@ using Newtonsoft.Json;
 
 namespace Microsoft.AspNetCore.SignalR.Internal
 {
-    public class DefaultHubProtocolResolver2 : IHubProtocolResolver
+    public class ServiceHubProtocolResolver : IHubProtocolResolver
     {
         private readonly IOptions<HubOptions> _options;
 
-        public DefaultHubProtocolResolver2(IOptions<HubOptions> options)
+        public ServiceHubProtocolResolver(IOptions<HubOptions> options)
         {
             _options = options;
         }
