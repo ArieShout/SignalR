@@ -76,7 +76,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceServer
             connection.AddTargetConnectionId(targetConnId);
 
             // Update entry score in the Sorted Set in Redis
-            await _redisServerConnection.GetDatabase().SortedSetIncrementAsync(hubName, connection.ConnectionId, 1);
+            await _redisServerConnection.GetDatabase().SortedSetIncrementAsync(hubName, targetConnId, 1);
             // Sync score from Redis
             if (_connectionStatus.TryGetValue(hubName, out var hubConnectionStatus))
             {
@@ -111,7 +111,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceServer
             if (targetConnId == null) return;
 
             // Update entry score in the Sorted Set in Redis
-            await _redisServerConnection.GetDatabase().SortedSetDecrementAsync(hubName, connection.ConnectionId, 1);
+            await _redisServerConnection.GetDatabase().SortedSetDecrementAsync(hubName, targetConnId, 1);
             // Sync score from Redis
             if (_connectionStatus.TryGetValue(hubName, out var hubConnectionStatus))
             {

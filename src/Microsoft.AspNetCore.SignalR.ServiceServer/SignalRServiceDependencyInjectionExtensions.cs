@@ -53,14 +53,15 @@ namespace Microsoft.Extensions.DependencyInjection
             return new SignalRBuilder(services);
         }
 
-        public static ISignalRBuilder AddRedis(this ISignalRBuilder builder)
+        public static ISignalRBuilder AddRedis2(this ISignalRBuilder builder)
         {
-            return AddRedis(builder, o => { });
+            return AddRedis2(builder, o => { });
         }
 
-        public static ISignalRBuilder AddRedis(this ISignalRBuilder builder, Action<RedisOptions2> configure)
+        public static ISignalRBuilder AddRedis2(this ISignalRBuilder builder, Action<RedisOptions2> configure)
         {
             builder.Services.Configure(configure);
+            builder.Services.AddSingleton(typeof(IHubConnectionRouter), typeof(RedisHubConnectionRouter));
             builder.Services.AddSingleton(typeof(IHubLifetimeManagerFactory), typeof(RedisHubLifetimeManagerFactory));
             return builder;
         }
