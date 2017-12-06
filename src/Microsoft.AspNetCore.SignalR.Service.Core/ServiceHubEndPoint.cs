@@ -14,14 +14,14 @@ using System.Threading.Tasks;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.SignalR.Internal;
-using Microsoft.AspNetCore.SignalR.ServiceCore.Internal;
-using Microsoft.AspNetCore.SignalR.ServiceCore.Connection;
+using Microsoft.AspNetCore.SignalR.Client.Internal;
+using Microsoft.AspNetCore.SignalR.Core.Internal;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using System.Security.Claims;
 
 namespace Microsoft.AspNetCore.SignalR.ServiceCore
 {
-    public class ServiceHubEndPoint<THub> : IInvocationBinder, IServiceHubReceiver where THub : Hub
+    public class ServiceHubEndPoint<THub> : IInvocationBinder where THub : Hub
     {
         private static readonly string OnClientConnectedMethod = "OnConnectedAsync";
         private static readonly string OnDisconnectedAsyncMethod = "OnDisconnectedAsync";
@@ -30,7 +30,6 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
         private HubConnection _hubConnection;
         private readonly IHubContext<THub> _hubContext;
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private HubProtocolReaderWriter _protocolReaderWriter;
         private readonly Dictionary<string, HubMethodDescriptor> _methods = new Dictionary<string, HubMethodDescriptor>(StringComparer.OrdinalIgnoreCase);
         public ServiceHubEndPoint(HubLifetimeManager<THub> lifetimeMgr,
             ILogger<ServiceHubEndPoint<THub>> logger,
@@ -435,11 +434,6 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
                 return Type.EmptyTypes;
             }
             return descriptor.ParameterTypes;
-        }
-
-        public void GenHubProtocolReaderWriter(HubProtocolReaderWriter protocolReaderWriter)
-        {
-            _protocolReaderWriter = protocolReaderWriter;
         }
 
         private class HubMethodDescriptor

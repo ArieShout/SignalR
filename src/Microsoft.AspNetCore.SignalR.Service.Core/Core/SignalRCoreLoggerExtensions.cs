@@ -5,7 +5,7 @@ using System;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceCore.Internal
+namespace Microsoft.AspNetCore.SignalR.Core.Internal
 {
     internal static class SignalRCoreLoggerExtensions
     {
@@ -87,6 +87,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore.Internal
         {
             _serviceConnectionCanceled(logger, exception);
         }
+
         public static void ErrorProcessingRequest(this ILogger logger, Exception exception)
         {
             _errorProcessingRequest(logger, exception);

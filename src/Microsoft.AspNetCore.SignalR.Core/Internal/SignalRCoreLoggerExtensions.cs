@@ -13,6 +13,9 @@ namespace Microsoft.AspNetCore.SignalR.Core.Internal
         private static readonly Action<ILogger, string, Exception> _usingHubProtocol =
             LoggerMessage.Define<string>(LogLevel.Information, new EventId(0, nameof(UsingHubProtocol)), "Using HubProtocol '{protocol}'.");
 
+        private static readonly Action<ILogger, Exception> _serviceConnectionCanceled =
+            LoggerMessage.Define(LogLevel.Debug, new EventId(1, nameof(ServiceConnectionCanceled)), "Service connection was canceled.");
+
         private static readonly Action<ILogger, Exception> _negotiateCanceled =
             LoggerMessage.Define(LogLevel.Debug, new EventId(1, nameof(NegotiateCanceled)), "Negotiate was canceled.");
 
@@ -78,6 +81,11 @@ namespace Microsoft.AspNetCore.SignalR.Core.Internal
         public static void NegotiateCanceled(this ILogger logger)
         {
             _negotiateCanceled(logger, null);
+        }
+
+        public static void ServiceConnectionCanceled(this ILogger logger, Exception exception)
+        {
+            _serviceConnectionCanceled(logger, exception);
         }
 
         public static void ErrorProcessingRequest(this ILogger logger, Exception exception)

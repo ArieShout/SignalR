@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using Microsoft.Extensions.Logging;
 using MsgPack.Serialization;
 using Newtonsoft.Json;
-using Microsoft.AspNetCore.SignalR.ServiceCore.Connection;
 using Microsoft.AspNetCore.SignalR.Internal;
 
 namespace Microsoft.AspNetCore.SignalR.Client
