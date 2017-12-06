@@ -6,31 +6,44 @@
     <meta http-equiv="Expires" content="0" />
     <title>SignalR Service Simple Chat</title>
     <style type="text/css">
-        .container {
-            background-color: #99CCFF;
-            border: thick solid #808080;
-            padding: 20px;
-            margin: 20px;
+        #messages
+        {
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid #ccc;
+            height: 400px;
+            float: none;
+            margin: 0px auto;
+            padding-left: 0px;
+            overflow-y: auto;
+        }
+
+        #messages li
+        {
+            list-style-type: none;
+            padding: 3px;
         }
     </style>
 </head>
-<body>
+<body style="background-color: indigo">
+<h2 style="text-align: center;color: white">DevDiv China SignalR Service</h2>
     <div class="container">
-        <input type="text" id="message" />
-        <input type="button" id="sendmessage" value="Send" />
-        <input type="button" id="echo" value="Echo" />
-        <!--<input type="hidden" id="displayname" />-->
-        <ul id="discussion"></ul>
+        <ul id="messages" style="background-color: whitesmoke"></ul>
+        <div style="margin: 10px auto; width: 100%; max-width: 350px;">
+            <input style="width: calc(100% - 120px); font-size: 18px;" type="text" id="message" />
+            <input style="font-size: 15px;" type="button" id="sendmessage" value="Send" />
+            <input style="font-size: 15px;" type="button" id="echo" value="Echo" />
+        </div>
     </div>
     <!--Script references. -->
     <!--Reference the SignalR library. -->
     <script>
-            if (typeof Promise === 'undefined') {
-                document.write('<script type="text/javascript" src="scripts/signalr-clientES5.js"><\/script>');
-            }
-            else {
-                document.write('<script type="text/javascript" src="scripts/signalr-client.js"><\/script>');
-            }
+        if (typeof Promise === 'undefined') {
+            document.write('<script type="text/javascript" src="scripts/signalr-clientES5.js"><\/script>');
+        }
+        else {
+            document.write('<script type="text/javascript" src="scripts/signalr-client.js"><\/script>');
+        }
     </script>
     <!--Add script to update the page and send messages.-->
     <script type="text/javascript">
@@ -44,51 +57,53 @@
             messageInput.focus();
 
             // Start the connection.
-            startConnection('http://honzhan-laptop:5001/client/chat', function(connection) {
+            startConnection('http://honzhan-laptop:5001/client/chat', function (connection) {
+                var messageCallback = function (name, message) {
+                    // Html encode display name and message.
+                    var encodedName = name;
+                    var encodedMsg = message;
+                    // Add the message to the page.
+                    var liElement = document.createElement('li');
+                    liElement.innerHTML = '<strong>' + encodedName + '</strong>:&nbsp;&nbsp;' + encodedMsg;
+                    var messageBox = document.getElementById('messages');
+                    messageBox.appendChild(liElement);
+                    messageBox.scrollTop = messageBox.scrollHeight;
+                };
                 // Create a function that the hub can call to broadcast messages.
-                connection.on('broadcastMessage', function (name, message) {
-                    // Html encode display name and message.
-                    var encodedName = name;
-                    var encodedMsg = message;
-                    // Add the message to the page.
-                    var liElement = document.createElement('li');
-                    liElement.innerHTML = '<strong>' + encodedName + '</strong>:&nbsp;&nbsp;' + encodedMsg;
-                    document.getElementById('discussion').appendChild(liElement);
-                });
-                connection.on('echo', function (name, message) {
-                    // Html encode display name and message.
-                    var encodedName = name;
-                    var encodedMsg = message;
-                    // Add the message to the page.
-                    var liElement = document.createElement('li');
-                    liElement.innerHTML = '<strong>' + encodedName + '</strong>:&nbsp;&nbsp;' + encodedMsg;
-                    document.getElementById('discussion').appendChild(liElement);
-                });
+                connection.on('broadcastMessage', messageCallback);
+                connection.on('echo', messageCallback);
             })
-            .then(function(connection) {
-                console.log('connection started');
-                document.getElementById('sendmessage').addEventListener('click', function (event) {
-                    // Call the Send method on the hub.
-                    connection.invoke('broadcastMessage', name, messageInput.value);
+                .then(function (connection) {
+                    console.log('connection started');
+                    connection.invoke('broadcastMessage', '[SYSTEM]', '----- ' + name + ' joined -----');
+                    document.getElementById('sendmessage').addEventListener('click', function (event) {
+                        // Call the Send method on the hub.
+                        connection.invoke('broadcastMessage', name, messageInput.value);
 
-                    // Clear text box and reset focus for next comment.
-                    messageInput.value = '';
-                    messageInput.focus();
-                    event.preventDefault();
-                });
-                document.getElementById('echo').addEventListener('click', function (event) {
-                    // Call the Send method on the hub.
-                    connection.invoke('echo', name, messageInput.value);
+                        // Clear text box and reset focus for next comment.
+                        messageInput.value = '';
+                        messageInput.focus();
+                        event.preventDefault();
+                    });
+                    document.getElementById('message').addEventListener('keypress', function (args) {
+                        if (args.keyCode === 13) {
+                            document.getElementById('sendmessage').click();
+                            return false;
+                        }
+                    });
+                    document.getElementById('echo').addEventListener('click', function (event) {
+                        // Call the Send method on the hub.
+                        connection.invoke('echo', name, messageInput.value);
 
-                    // Clear text box and reset focus for next comment.
-                    messageInput.value = '';
-                    messageInput.focus();
-                    event.preventDefault();
+                        // Clear text box and reset focus for next comment.
+                        messageInput.value = '';
+                        messageInput.focus();
+                        event.preventDefault();
+                    });
+                })
+                .catch(error => {
+                    console.error(error.message);
                 });
-            })
-            .catch(error => {
-                console.error(error.message);
-            });
 
             // Starts a connection with transport fallback - if the connection cannot be started using
             // the webSockets transport the function will fallback to the serverSentEvents transport and
@@ -97,16 +112,16 @@
             function startConnection(url, configureConnection) {
                 return function start(transport) {
                     console.log(`Starting connection using ${signalR.TransportType[transport]} transport`)
-                    var connection = new signalR.HubConnection(url, {transport: transport});
+                    var connection = new signalR.HubConnection(url, { transport: transport });
                     if (configureConnection && typeof configureConnection === 'function') {
                         configureConnection(connection);
                     }
 
                     return connection.start()
-                        .then(function() {
+                        .then(function () {
                             return connection;
                         })
-                        .catch(function(error) {
+                        .catch(function (error) {
                             console.log(`Cannot start the connection use ${signalR.TransportType[transport]} transport. ${error.message}`);
                             if (transport !== signalR.TransportType.LongPolling) {
                                 return start(transport + 1);
