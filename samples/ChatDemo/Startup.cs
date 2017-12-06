@@ -50,7 +50,7 @@ namespace MyChat
                 {
                     logLevel = LogLevel.Trace;
                 }
-                configHub.BuildServiceHub<ChatHub>(signalrServicePath +"/server/chat", logLevel);
+                configHub.BuildServiceHub<ChatHub>(signalrServicePath + "/server/chat", logLevel);
             });
         }
     }
