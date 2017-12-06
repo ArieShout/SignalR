@@ -13,10 +13,12 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
     public class ServiceHubBuilder
     {
         public IServiceProvider ApplicationServices { get; }
+
         public ServiceHubBuilder(IServiceProvider applicationServices)
         {
             ApplicationServices = applicationServices;
         }
+
         public async void BuildServiceHub<THub>(string path, LogLevel consoleLogLevel = LogLevel.Information) where THub : Hub
         {
             ServiceHubEndPoint<THub> endPoint = this.ApplicationServices.GetRequiredService<ServiceHubEndPoint<THub>>();

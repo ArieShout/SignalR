@@ -11,12 +11,14 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
     {
         private readonly ServiceConnectionContext _connectionContext;
         private readonly HubConnection _hubConnection;
+
         public ServiceHubConnectionContext(ServiceConnectionContext connectionContext, HubConnection hubConnection)
             : base(null, null)
         {
             _connectionContext = connectionContext;
             _hubConnection = hubConnection;
         }
+
         public override string ConnectionId => _connectionContext.ConnectionId;
 
         public InvocationMessage CreateInvocationMessage(string methodName, object[] args)
@@ -36,7 +38,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
         {
             await _hubConnection.InvokeAsync(message);
         }
-        
+
         private string GetNextInvocationId()
         {
             return _hubConnection.GetNextId();

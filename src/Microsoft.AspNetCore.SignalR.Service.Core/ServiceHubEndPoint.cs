@@ -42,6 +42,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             _hubContext = hubContext;
             DiscoverHubMethods();
         }
+
         public void UseHub(string path, LogLevel logLevel = LogLevel.Information)
         {
             _hubConnection = new HubConnectionBuilder()
@@ -99,7 +100,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
                 _logger.HubMethodBound(methodName);
             }
         }
-        
+
         private async Task HubOnConnectedAsync(ServiceHubConnectionContext connection)
         {
             try
@@ -307,36 +308,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
 
             return false;
         }
-        /*TODO
-        private IAsyncEnumerator<object> GetStreamingEnumerator(string invocationId, ObjectMethodExecutor methodExecutor, object result, Type resultType)
-        {
-            if (result != null)
-            {
-                var observableInterface = IsIObservable(resultType) ?
-                    resultType :
-                    resultType.GetInterfaces().FirstOrDefault(IsIObservable);
-                if (observableInterface != null)
-                {
-                    return AsyncEnumeratorAdapters.FromObservable(result, observableInterface, CreateCancellation());
-                }
 
-                if (IsChannel(resultType, out var payloadType))
-                {
-                    return AsyncEnumeratorAdapters.FromChannel(result, payloadType, CreateCancellation());
-                }
-            }
-
-            _logger.InvalidReturnValueFromStreamingMethod(methodExecutor.MethodInfo.Name);
-            throw new InvalidOperationException($"The value returned by the streaming method '{methodExecutor.MethodInfo.Name}' is null, does not implement the IObservable<> interface or is not a ReadableChannel<>.");
-            
-            CancellationToken CreateCancellation()
-            {
-                var streamCts = new CancellationTokenSource();
-                connection.ActiveRequestCancellationSources.TryAdd(invocationId, streamCts);
-                return CancellationTokenSource.CreateLinkedTokenSource(connection.ConnectionAbortedToken, streamCts.Token).Token;
-            }
-        }
-        */
         private async Task Invoke(HubMethodDescriptor descriptor, HubConnectionContext connection,
             HubMethodInvocationMessage hubMethodInvocationMessage, bool isStreamedInvocation)
         {
@@ -345,13 +317,6 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             using (var scope = _serviceScopeFactory.CreateScope())
             {
                 /* TODO: Authorization support
-                if (!await IsHubMethodAuthorized(scope.ServiceProvider, descriptor.Policies))
-                {
-                    _logger.HubMethodNotAuthorized(hubMethodInvocationMessage.Target);
-                    await SendInvocationError(hubMethodInvocationMessage,
-                        $"Failed to invoke '{hubMethodInvocationMessage.Target}' because user is unauthorized");
-                    return;
-                }
                 */
                 if (!await ValidateInvocationMode(methodExecutor.MethodReturnType, isStreamedInvocation, hubMethodInvocationMessage))
                 {
@@ -370,11 +335,6 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
                     if (isStreamedInvocation)
                     {
                         // TODO. Streamed Invocation support
-                        /*
-                        var enumerator = GetStreamingEnumerator(hubMethodInvocationMessage.InvocationId, methodExecutor, result, methodExecutor.MethodReturnType);
-                        _logger.StreamingResult(hubMethodInvocationMessage.InvocationId, methodExecutor.MethodReturnType.FullName);
-                        await StreamResultsAsync(hubMethodInvocationMessage.InvocationId, connection, enumerator);
-                        */
                     }
                     else if (!hubMethodInvocationMessage.NonBlocking)
                     {
@@ -452,6 +412,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             public IList<IAuthorizeData> Policies { get; }
         }
     }
+
     public static class HubReflectionHelper
     {
         private static readonly Type[] _excludeInterfaces = new[] { typeof(IDisposable) };
@@ -485,5 +446,5 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             var baseType = baseDefinition.GetTypeInfo().IsGenericType ? baseDefinition.GetGenericTypeDefinition() : baseDefinition;
             return typeof(Hub) != baseType;
         }
-    }    
+    }
 }

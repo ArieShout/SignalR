@@ -84,21 +84,6 @@ namespace Microsoft.AspNetCore.SignalR.Client
             }
         }
 
-        public IDisposable On(string methodName, Type[] parameterTypes, Func<object[], object, Task> handler, object state)
-        {
-            var invocationHandler = new InvocationHandler(parameterTypes, handler, state);
-            var invocationList = _handlers.AddOrUpdate(methodName, _ => new List<InvocationHandler> { invocationHandler },
-                (_, invocations) =>
-                {
-                    lock (invocations)
-                    {
-                        invocations.Add(invocationHandler);
-                    }
-                    return invocations;
-                });
-
-            return new Subscription(invocationHandler, invocationList);
-        }
         public async Task StartAsync()
         {
             try
@@ -160,6 +145,23 @@ namespace Microsoft.AspNetCore.SignalR.Client
             await Closed;
         }
 
+        // TODO: Client return values/tasks?
+        public IDisposable On(string methodName, Type[] parameterTypes, Func<object[], object, Task> handler, object state)
+        {
+            var invocationHandler = new InvocationHandler(parameterTypes, handler, state);
+            var invocationList = _handlers.AddOrUpdate(methodName, _ => new List<InvocationHandler> { invocationHandler },
+                (_, invocations) =>
+                {
+                    lock (invocations)
+                    {
+                        invocations.Add(invocationHandler);
+                    }
+                    return invocations;
+                });
+
+            return new Subscription(invocationHandler, invocationList);
+        }
+
         public async Task<ChannelReader<object>> StreamAsync(string methodName, Type returnType, object[] args, CancellationToken cancellationToken = default)
         {
             return await StreamAsyncCore(methodName, returnType, args, cancellationToken).ForceAsync();
@@ -203,6 +205,7 @@ namespace Microsoft.AspNetCore.SignalR.Client
 
             return channel;
         }
+
         // Async invocation without response from SignalR service side, so here does not trace InvocationRequest Completion
         public async Task InvokeAsync(InvocationMessage message)
         {
@@ -266,7 +269,7 @@ namespace Microsoft.AspNetCore.SignalR.Client
             // We don't need to wait for this to complete. It will signal back to the invocation request.
             return SendHubMessage(invocationMessage, irq);
         }
-        
+
         private async Task SendHubMessage(HubInvocationMessage hubMessage, InvocationRequest irq)
         {
             try
@@ -339,6 +342,7 @@ namespace Microsoft.AspNetCore.SignalR.Client
             }
             DispatchInvocationStreamItemAsync(streamItem, irq);
         }
+
         private async Task OnDataReceivedAsync(byte[] data)
         {
             if (_protocolReaderWriter.ReadMessages(data, _binder, out var messages))
@@ -395,6 +399,7 @@ namespace Microsoft.AspNetCore.SignalR.Client
                 _pendingCalls.Clear();
             }
         }
+
         private async Task DispatchInvocationAsync(InvocationMessage invocation, CancellationToken cancellationToken)
         {
             // Find the handler

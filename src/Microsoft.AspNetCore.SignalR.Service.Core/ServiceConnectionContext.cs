@@ -19,6 +19,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
         public override IFeatureCollection Features => throw new System.NotImplementedException();
 
         public override IDictionary<object, object> Metadata { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
+
         public override Channel<byte[]> Transport { get => throw new System.NotImplementedException(); set => throw new System.NotImplementedException(); }
     }
 }
