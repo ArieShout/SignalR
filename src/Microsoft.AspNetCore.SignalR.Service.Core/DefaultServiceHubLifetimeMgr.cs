@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Microsoft.AspNetCore.SignalR.ServiceCore
 {
-    public class DefaultServiceHubLifetimeMgr<THub> : HubLifetimeManager<THub>
+    public class DefaultServiceHubLifetimeManager<THub> : HubLifetimeManager<THub>
     {
         private readonly HubConnectionList _connections = new HubConnectionList();
         private readonly HubGroupList _groups = new HubGroupList();
