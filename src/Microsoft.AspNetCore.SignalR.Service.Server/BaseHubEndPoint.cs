@@ -107,7 +107,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         #region Private Methods
 
-        private string GetHubName(ServiceHubConnectionContext connection)
+        private static string GetHubName(HubConnectionContext connection)
         {
             if (connection.Metadata.ContainsKey("HubName"))
             {
@@ -287,16 +287,13 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         #region Abstract Methods
 
-        protected abstract Task OnHubConnectedAsync(string hubName, ServiceHubConnectionContext connection);
+        protected abstract Task OnHubConnectedAsync(string hubName, HubConnectionContext connection);
 
-        protected abstract Task OnHubDisconnectedAsync(string hubName, ServiceHubConnectionContext connection,
-            Exception exception);
+        protected abstract Task OnHubDisconnectedAsync(string hubName, HubConnectionContext connection, Exception exception);
 
-        protected abstract Task OnHubInvocationAsync(string hubName, ServiceHubConnectionContext connection,
-            HubMethodInvocationMessage message);
+        protected abstract Task OnHubInvocationAsync(string hubName, HubConnectionContext connection, HubMethodInvocationMessage message);
 
-        protected abstract Task OnHubCompletionAsync(string hubName, ServiceHubConnectionContext connection,
-            CompletionMessage message);
+        protected abstract Task OnHubCompletionAsync(string hubName, HubConnectionContext connection, CompletionMessage message);
 
         #endregion
     }

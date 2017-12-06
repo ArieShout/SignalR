@@ -28,22 +28,22 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             _hubMessageBroker = hubMessageBroker;
         }
 
-        protected override async Task OnHubConnectedAsync(string hubName, ServiceHubConnectionContext connection)
+        protected override async Task OnHubConnectedAsync(string hubName, HubConnectionContext connection)
         {
             await _hubMessageBroker.OnClientConnectedAsync(hubName, connection);
         }
 
-        protected override async Task OnHubDisconnectedAsync(string hubName, ServiceHubConnectionContext connection, Exception exception)
+        protected override async Task OnHubDisconnectedAsync(string hubName, HubConnectionContext connection, Exception exception)
         {
             await _hubMessageBroker.OnClientDisconnectedAsync(hubName, connection);
         }
 
-        protected override async Task OnHubInvocationAsync(string hubName, ServiceHubConnectionContext connection, HubMethodInvocationMessage message)
+        protected override async Task OnHubInvocationAsync(string hubName, HubConnectionContext connection, HubMethodInvocationMessage message)
         {
             await _hubMessageBroker.PassThruClientMessage(hubName, connection, message);
         }
 
-        protected override async Task OnHubCompletionAsync(string hubName, ServiceHubConnectionContext connection, CompletionMessage message)
+        protected override async Task OnHubCompletionAsync(string hubName, HubConnectionContext connection, CompletionMessage message)
         {
             await Task.CompletedTask;
         }
