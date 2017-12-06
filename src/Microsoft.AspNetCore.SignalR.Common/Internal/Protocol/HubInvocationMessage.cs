@@ -12,6 +12,8 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
         public IDictionary<string, string> Metadata { get; } = new Dictionary<string, string>();
         internal const string ConnectionIdKeyName = "connId";
+        internal const string GroupNameKeyName = "groupName";
+        internal const string ExcludedIdsKeyName = "excluded";
         protected HubInvocationMessage(string invocationId)
         {
             InvocationId = invocationId;

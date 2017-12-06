@@ -204,16 +204,11 @@ namespace Microsoft.AspNetCore.SignalR.Client
             return channel;
         }
         // Async invocation without response from SignalR service side, so here does not trace InvocationRequest Completion
-        public async Task InvokeAsync(string connectionId, string methodName, object[] args, CancellationToken cancellationToken = default) =>
-            await NoConfirmInvokeCore(connectionId, methodName, args).ForceAsync();
-
-        private async Task NoConfirmInvokeCore(string connectionId, string methodName, object[] args)
+        public async Task InvokeAsync(InvocationMessage message)
         {
-            var invocationMessage = new InvocationMessage(GetNextId(), nonBlocking: false, target: methodName,
-                argumentBindingException: null, arguments: args).AddConnectionId(connectionId);
-            _logger.RegisterInvocation(invocationMessage.InvocationId);
-            _logger.IssueInvocation(invocationMessage.InvocationId, typeof(object).FullName, methodName, args);
-            await SendHubMessage(invocationMessage);
+            _logger.RegisterInvocation(message.InvocationId);
+            _logger.IssueInvocation(message.InvocationId, typeof(object).FullName, message.Target, message.Arguments);
+            await SendHubMessage(message);
         }
 
         public async Task<object> InvokeAsync(string methodName, Type returnType, object[] args, CancellationToken cancellationToken = default) =>

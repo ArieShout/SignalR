@@ -18,9 +18,28 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             _hubConnection = hubConnection;
         }
         public override string ConnectionId => _connectionContext.ConnectionId;
+
+        public InvocationMessage CreateInvocationMessage(string methodName, object[] args)
+        {
+            var invocationMessage = new InvocationMessage(GetNextInvocationId(),
+                nonBlocking: false, target: methodName,
+                argumentBindingException: null, arguments: args);
+            return invocationMessage;
+        }
+
         public async Task InvokeAsync(string methodName, object[] args)
         {
             await _hubConnection.InvokeAsync(ConnectionId, methodName, args);
+        }
+
+        public async Task InvokeAsync(InvocationMessage message)
+        {
+            await _hubConnection.InvokeAsync(message);
+        }
+        
+        private string GetNextInvocationId()
+        {
+            return _hubConnection.GetNextId();
         }
     }
 }

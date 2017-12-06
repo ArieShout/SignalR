@@ -8,10 +8,6 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
     public class HubMessageBroker : IHubMessageBroker
     {
-        private const string ConnectionIdKeyName = "connId";
-        private const string GroupNameKeyName = "groupName";
-        private const string ExcludedIdsKeyName = "excluded";
-
         private const string OnConnectedMethodName = "OnConnectedAsync";
         private const string OnDisconnectedMethodName = "OnDisconnectedAsync";
 
@@ -76,7 +72,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             if (_serverHubManagerDict.TryGetValue(hubName, out var serverHubManager))
             {
                 // Add original connection Id to message metadata
-                message.Metadata.Add(ConnectionIdKeyName, context.ConnectionId);
+                message.AddConnectionId(context.ConnectionId);
 
                 await ((DefaultHubLifetimeManager<ServerHub>)serverHubManager).SendMessageAsync(targetConnId, message);
             }
@@ -112,22 +108,22 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             if (_clientHubManagerDict.TryGetValue(hubName, out var clientHubManager))
             {
                 // Invoke a single connection
-                if (message.TryGetProperty(ConnectionIdKeyName, out var connectionId))
+                if (message.TryGetConnectionId(out var connectionId))
                 {
                     await clientHubManager.InvokeConnectionAsync(connectionId, message.Target,
                         message.Arguments);
                 }
                 // Invoke a group
-                else if (message.TryGetProperty(GroupNameKeyName, out var groupName))
+                else if (message.TryGetGroupName(out var groupName))
                 {
                     await clientHubManager.InvokeGroupAsync(groupName, message.Target,
                         message.Arguments);
                 }
                 // Invoke all except
-                else if (message.TryGetProperty(ExcludedIdsKeyName, out var excludedIds))
+                else if (message.TryGetExcludedIds(out var excludedIds))
                 {
                     await clientHubManager.InvokeAllExceptAsync(message.Target, message.Arguments,
-                        excludedIds.Split(',').ToList());
+                        excludedIds);
                 }
                 // Invoke all
                 else
@@ -141,7 +137,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
         {
             if (_clientHubManagerDict.TryGetValue(hubName, out var clientHubManager))
             {
-                if (message.TryGetProperty(ConnectionIdKeyName, out var connectionId))
+                if (message.TryGetConnectionId(out var connectionId))
                 {
                     await ((DefaultHubLifetimeManager<ClientHub>)clientHubManager).SendMessageAsync(connectionId, message);
                 }

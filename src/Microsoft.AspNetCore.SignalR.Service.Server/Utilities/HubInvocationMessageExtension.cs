@@ -17,25 +17,5 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             }
             return message;
         }
-
-        public static TMessage AddMetadata<TMessage>(this TMessage message, string key, string value)
-            where TMessage : HubInvocationMessage
-        {
-            if (message != null && !string.IsNullOrEmpty(key))
-            {
-                message.Metadata.Add(key, value);
-            }
-            return message;
-        }
-
-        public static bool TryGetProperty(this HubInvocationMessage message, string propertyName, out string propertyValue)
-        {
-            if (message.Metadata == null)
-            {
-                propertyValue = null;
-                return false;
-            }
-            return message.Metadata.TryGetValue(propertyName, out propertyValue);
-        }
     }
 }
