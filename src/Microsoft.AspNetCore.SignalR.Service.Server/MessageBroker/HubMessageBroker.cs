@@ -219,7 +219,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             if (message.TryGetGroupName(out var groupName) &&
                 message.TryGetConnectionId(out var connectionId))
             {
-                await clientHubManager.AddGroupAsync(groupName, connectionId);
+                await clientHubManager.AddGroupAsync(connectionId, groupName);
             }
         }
 
@@ -229,7 +229,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             if (message.TryGetGroupName(out var groupName) &&
                 message.TryGetConnectionId(out var connectionId))
             {
-                await clientHubManager.RemoveGroupAsync(groupName, connectionId);
+                await clientHubManager.RemoveGroupAsync(connectionId, groupName);
             }
         }
 
