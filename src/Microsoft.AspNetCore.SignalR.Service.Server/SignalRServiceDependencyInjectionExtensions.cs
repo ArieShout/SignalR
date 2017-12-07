@@ -2,10 +2,14 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Core;
 using Microsoft.AspNetCore.SignalR.Internal;
 using Microsoft.AspNetCore.SignalR.Service.Server;
+using Microsoft.AspNetCore.SignalR.Service.Server.Auth;
 using Microsoft.AspNetCore.Sockets;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -27,8 +31,37 @@ namespace Microsoft.Extensions.DependencyInjection
 
         public static IServiceCollection AddSockets2(this IServiceCollection services)
         {
+            services.AddAuthentication(BasicAuthenticationDefaults.AuthenticationScheme)
+                .AddBasic(options =>
+                {
+                    options.AllowInsecureProtocol = true;
+                    options.Events = new BasicAuthenticationEvents
+                    {
+                        OnValidateCredentials = context =>
+                        {
+                            var claims = new[]
+                            {
+                                new Claim(
+                                    ClaimTypes.NameIdentifier,
+                                    context.Username,
+                                    ClaimValueTypes.String,
+                                    context.Options.ClaimsIssuer),
+                                new Claim(
+                                    ClaimTypes.Name,
+                                    context.Username,
+                                    ClaimValueTypes.String,
+                                    context.Options.ClaimsIssuer)
+                            };
+
+                            context.Principal = new ClaimsPrincipal(
+                                new ClaimsIdentity(claims, context.Scheme.Name));
+                            context.Success();
+                            return Task.CompletedTask;
+                        }
+                    };
+                });
+
             services.AddRouting();
-            services.AddAuthentication();
             services.AddAuthorizationPolicyEvaluator();
             services.TryAddSingleton<HttpConnectionDispatcher>();
             return services.AddSocketsCore();

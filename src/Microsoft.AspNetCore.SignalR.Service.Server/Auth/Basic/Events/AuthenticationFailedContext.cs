@@ -2,12 +2,11 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 
-namespace idunno.Authentication
+namespace Microsoft.AspNetCore.SignalR.Service.Server.Auth
 {
     public class AuthenticationFailedContext : ResultContext<BasicAuthenticationOptions>
     {

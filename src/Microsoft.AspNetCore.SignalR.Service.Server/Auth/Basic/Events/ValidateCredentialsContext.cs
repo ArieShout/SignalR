@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 
-namespace idunno.Authentication
+namespace Microsoft.AspNetCore.SignalR.Service.Server.Auth
 {
     public class ValidateCredentialsContext : ResultContext<BasicAuthenticationOptions>
     {
@@ -14,9 +14,7 @@ namespace idunno.Authentication
         /// </summary>
         /// <param name="context">The HttpContext the validate context applies too.</param>
         /// <param name="scheme">The scheme used when the Basic Authentication handler was registered.</param>
-        /// <param name="options">The <see cref="BasicAuthenticationOptions"/> for the instance of
-        /// <see cref="BasicAuthenticationMiddleware"/> creating this instance.</param>
-        /// <param name="ticket">Contains the intial values for the identit.</param>
+        /// <param name="options">The <see cref="BasicAuthenticationOptions"/></param>
         public ValidateCredentialsContext(
             HttpContext context,
             AuthenticationScheme scheme,

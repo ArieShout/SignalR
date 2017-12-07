@@ -4,7 +4,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace idunno.Authentication
+namespace Microsoft.AspNetCore.SignalR.Service.Server.Auth
 {
     /// <summary>
     /// This default implementation of the IBasicAuthenticationEvents may be used if the

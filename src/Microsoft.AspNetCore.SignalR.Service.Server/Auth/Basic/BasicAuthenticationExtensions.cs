@@ -3,8 +3,7 @@
 
 using System;
 using Microsoft.AspNetCore.Authentication;
-
-using idunno.Authentication;
+using Microsoft.AspNetCore.SignalR.Service.Server.Auth;
 
 namespace Microsoft.AspNetCore.Builder
 {

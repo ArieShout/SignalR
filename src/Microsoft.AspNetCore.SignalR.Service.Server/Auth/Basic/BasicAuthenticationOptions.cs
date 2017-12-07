@@ -1,10 +1,7 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
-
-using System;
+﻿using System;
+using System.Linq;
 using Microsoft.AspNetCore.Authentication;
-
-using idunno.Authentication;
+using Microsoft.AspNetCore.SignalR.Service.Server.Auth;
 
 namespace Microsoft.AspNetCore.Builder
 {
@@ -19,13 +16,6 @@ namespace Microsoft.AspNetCore.Builder
         private string _realm;
 
         /// <summary>
-        /// Create an instance of the options initialized with the default values
-        /// </summary>
-        public BasicAuthenticationOptions()
-        {
-        }
-
-        /// <summary>
         /// Gets or sets the Realm sent in the WWW-Authenticate header.
         /// </summary>
         /// <remarks>
@@ -37,10 +27,7 @@ namespace Microsoft.AspNetCore.Builder
         /// </remarks>
         public string Realm
         {
-            get
-            {
-                return _realm;
-            }
+            get => _realm;
 
             set
             {
@@ -72,17 +59,9 @@ namespace Microsoft.AspNetCore.Builder
         public new BasicAuthenticationEvents Events { get; set; } = new BasicAuthenticationEvents();
 
 
-        private bool IsAscii(string input)
+        private static bool IsAscii(string input)
         {
-            foreach (char c in input)
-            {
-                if (c < 32 || c >= 127)
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            return input.All(c => c >= 32 && c < 127);
         }
     }
 }

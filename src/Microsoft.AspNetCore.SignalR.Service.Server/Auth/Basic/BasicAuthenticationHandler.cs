@@ -1,21 +1,15 @@
-﻿// Copyright (c) Barry Dorrans. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
-
-using System;
-using System.Linq;
-using System.Text.Encodings.Web;
+﻿using System;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Threading.Tasks;
-
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
-using System.IO;
 
-namespace idunno.Authentication
+namespace Microsoft.AspNetCore.SignalR.Service.Server.Auth
 {
     internal class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticationOptions>
     {
@@ -35,8 +29,8 @@ namespace idunno.Authentication
         /// </summary>
         protected new BasicAuthenticationEvents Events
         {
-            get { return (BasicAuthenticationEvents)base.Events; }
-            set { base.Events = value; }
+            get => (BasicAuthenticationEvents)base.Events;
+            set => base.Events = value;
         }
 
         /// <summary>
@@ -69,7 +63,7 @@ namespace idunno.Authentication
 
             try
             {
-                string decodedCredentials = string.Empty;
+                var decodedCredentials = string.Empty;
                 try
                 {
                     decodedCredentials = Encoding.UTF8.GetString(Convert.FromBase64String(encodedCredentials));
@@ -98,13 +92,10 @@ namespace idunno.Authentication
 
                 await Options.Events.ValidateCredentials(validateCredentialsContext);
 
-                if (validateCredentialsContext.Result != null)
-                {
-                    var ticket = new AuthenticationTicket(validateCredentialsContext.Principal, Scheme.Name);
-                    return AuthenticateResult.Success(ticket);
-                }
+                if (validateCredentialsContext.Result == null) return AuthenticateResult.NoResult();
 
-                return AuthenticateResult.NoResult();
+                var ticket = new AuthenticationTicket(validateCredentialsContext.Principal, Scheme.Name);
+                return AuthenticateResult.Success(ticket);
             }
             catch (Exception ex)
             {

@@ -10,6 +10,7 @@ namespace Microsoft.AspNetCore.Builder
     {
         public static IApplicationBuilder UseSignalRServiceServer(this IApplicationBuilder app)
         {
+            app.UseAuthentication();
             app.UseSockets(routes =>
             {
                 var hubRouteBuilder = new HubRouteBuilder(routes);
