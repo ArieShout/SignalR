@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Threading.Tasks;
+using System.Threading.Channels;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 
@@ -12,23 +13,16 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
         private readonly ServiceConnectionContext _connectionContext;
         private readonly HubConnection _hubConnection;
 
-        public ServiceHubConnectionContext(ServiceConnectionContext connectionContext, HubConnection hubConnection)
-            : base(null, null)
+        public ServiceHubConnectionContext(ServiceConnectionContext connectionContext,
+            ChannelWriter<HubMessage> output, HubConnection hubConnection)
+            : base(output, null)
         {
             _connectionContext = connectionContext;
             _hubConnection = hubConnection;
         }
 
         public override string ConnectionId => _connectionContext.ConnectionId;
-
-        public InvocationMessage CreateInvocationMessage(string methodName, object[] args)
-        {
-            var invocationMessage = new InvocationMessage(GetNextInvocationId(),
-                nonBlocking: false, target: methodName,
-                argumentBindingException: null, arguments: args);
-            return invocationMessage;
-        }
-
+        
         public async Task InvokeAsync(string methodName, object[] args)
         {
             await _hubConnection.InvokeAsync(ConnectionId, methodName, args);

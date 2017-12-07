@@ -43,8 +43,6 @@ namespace Microsoft.AspNetCore.SignalR.Redis
 
         private long _nextInvocationId = 0;
 
-        public override HubConnectionList Connections => _connections;
-
         public RedisHubLifetimeManager(ILogger<RedisHubLifetimeManager<THub>> logger,
                                        IOptions<RedisOptions> options)
         {

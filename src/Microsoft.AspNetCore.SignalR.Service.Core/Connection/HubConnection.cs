@@ -67,7 +67,13 @@ namespace Microsoft.AspNetCore.SignalR.Client
 
         public IConnection Connection => _connection;
 
-        public async Task SendHubMessage(HubInvocationMessage hubMessage)
+        public async Task SendHubMessage(HubMessage hubMessage)
+        {
+            var payload = _protocolReaderWriter.WriteMessage(hubMessage);
+            await _connection.SendAsync(payload, default);
+        }
+        /*
+        public async Task SendHubInvocationMessage(HubInvocationMessage hubMessage)
         {
             try
             {
@@ -80,10 +86,9 @@ namespace Microsoft.AspNetCore.SignalR.Client
             catch (Exception ex)
             {
                 _logger.SendInvocationFailed(hubMessage.InvocationId, ex);
-                TryRemoveInvocation(hubMessage.InvocationId, out _);
             }
         }
-
+        */
         public async Task StartAsync()
         {
             try

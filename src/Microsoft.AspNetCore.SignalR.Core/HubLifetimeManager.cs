@@ -25,8 +25,6 @@ namespace Microsoft.AspNetCore.SignalR
         public abstract Task AddGroupAsync(string connectionId, string groupName);
 
         public abstract Task RemoveGroupAsync(string connectionId, string groupName);
-
-        public abstract HubConnectionList Connections { get; } // new API, added by requirement of prototype
     }
 
 }

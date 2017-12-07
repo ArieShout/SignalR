@@ -44,8 +44,6 @@ namespace ChatSample
         private readonly HubLifetimeManager<THub> _wrappedHubLifetimeManager;
         private IHubContext<THub> _hubContext;
 
-        public override HubConnectionList Connections => _connections;
-
         public PresenceHubLifetimeManager(IUserTracker<THub> userTracker, IServiceScopeFactory serviceScopeFactory,
             ILoggerFactory loggerFactory, IServiceProvider serviceProvider)
         {

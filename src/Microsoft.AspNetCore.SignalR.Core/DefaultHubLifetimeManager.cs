@@ -16,8 +16,6 @@ namespace Microsoft.AspNetCore.SignalR
         private readonly HubConnectionList _connections = new HubConnectionList();
         private readonly HubGroupList _groups = new HubGroupList();
 
-        public override HubConnectionList Connections => _connections;
-
         public override Task AddGroupAsync(string connectionId, string groupName)
         {
             if (connectionId == null)
