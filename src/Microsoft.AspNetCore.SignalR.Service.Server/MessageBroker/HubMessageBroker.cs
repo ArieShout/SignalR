@@ -39,7 +39,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             _hubLifetimeManagerFactory = hubLifetimeManagerFactory;
         }
 
-        #region Client connections
+        #region Client Connections
 
         public async Task OnClientConnectedAsync(string hubName, HubConnectionContext context)
         {
@@ -121,28 +121,20 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
         public async Task PassThruServerMessage(string hubName, HubConnectionContext context,
             HubMethodInvocationMessage message)
         {
-            if (_clientHubManagerDict.TryGetValue(hubName, out var clientHubManager))
+            if (TryGetAction(message, out var action) &&
+                _clientHubManagerDict.TryGetValue(hubName, out var clientHubManager))
             {
-                if (message.TryGetAction(out var actionName))
-                {
-                    if (!string.IsNullOrEmpty(actionName) &&
-                        _clientHubActions.TryGetValue(actionName.ToLower(), out var action))
-                    {
-                        await action.Invoke(clientHubManager, message);
-                    }
-                }
+                await action.Invoke(clientHubManager, message);
             }
         }
 
         public async Task PassThruServerMessage(string hubName, HubConnectionContext context, CompletionMessage message)
         {
-            if (_clientHubManagerDict.TryGetValue(hubName, out var clientHubManager))
+            if (message.TryGetConnectionId(out var connectionId) &&
+                _clientHubManagerDict.TryGetValue(hubName, out var clientHubManager))
             {
-                if (message.TryGetConnectionId(out var connectionId))
-                {
-                    await ((DefaultHubLifetimeManager<ClientHub>) clientHubManager).SendMessageAsync(connectionId,
-                        message);
-                }
+                await ((DefaultHubLifetimeManager<ClientHub>) clientHubManager).SendMessageAsync(connectionId,
+                    message);
             }
         }
 
@@ -167,6 +159,19 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
         {
             return _clientHubManagerDict.GetOrAdd(hubName,
                 _ => _hubLifetimeManagerFactory.Create<ClientHub>($"client.{hubName}"));
+        }
+
+        private bool TryGetAction(HubMethodInvocationMessage message,
+            out Func<HubLifetimeManager<ClientHub>, HubMethodInvocationMessage, Task> action)
+        {
+            if (message.TryGetAction(out var actionName) && !string.IsNullOrEmpty(actionName) &&
+                _clientHubActions.TryGetValue(actionName.ToLower(), out action))
+            {
+                return true;
+            }
+
+            action = null;
+            return false;
         }
 
         #endregion
