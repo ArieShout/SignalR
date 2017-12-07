@@ -57,7 +57,7 @@
             messageInput.focus();
 
             // Start the connection.
-            startConnection('http://honzhan-laptop:5001/client/chat', function (connection) {
+            startConnection('http://' + window.location.hostname + ':5001/client/chat', function (connection) {
                 var messageCallback = function (name, message) {
                     // Html encode display name and message.
                     var encodedName = name;
@@ -77,7 +77,7 @@
                     console.log('connection started');
                     connection.invoke('broadcastMessage', '[SYSTEM]', '----- ' + name + ' joined -----');
                     document.getElementById('sendmessage').addEventListener('click', function (event) {
-                        // Call the Send method on the hub.
+                        // Call the broadcastMessage method on the hub.
                         connection.invoke('broadcastMessage', name, messageInput.value);
 
                         // Clear text box and reset focus for next comment.
@@ -92,7 +92,7 @@
                         }
                     });
                     document.getElementById('echo').addEventListener('click', function (event) {
-                        // Call the Send method on the hub.
+                        // Call the echo method on the hub.
                         connection.invoke('echo', name, messageInput.value);
 
                         // Clear text box and reset focus for next comment.
