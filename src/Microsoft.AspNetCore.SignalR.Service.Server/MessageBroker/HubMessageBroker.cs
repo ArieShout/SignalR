@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Linq;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 
@@ -12,8 +12,23 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
         private const string OnDisconnectedMethodName = "OnDisconnectedAsync";
 
         // TODO: cleanup unused HubLifetimeManager to avoid memory leak
-        private readonly ConcurrentDictionary<string, HubLifetimeManager<ClientHub>> _clientHubManagerDict = new ConcurrentDictionary<string, HubLifetimeManager<ClientHub>>();
-        private readonly ConcurrentDictionary<string, HubLifetimeManager<ServerHub>> _serverHubManagerDict = new ConcurrentDictionary<string, HubLifetimeManager<ServerHub>>();
+        private readonly ConcurrentDictionary<string, HubLifetimeManager<ClientHub>> _clientHubManagerDict =
+            new ConcurrentDictionary<string, HubLifetimeManager<ClientHub>>();
+
+        private readonly ConcurrentDictionary<string, HubLifetimeManager<ServerHub>> _serverHubManagerDict =
+            new ConcurrentDictionary<string, HubLifetimeManager<ServerHub>>();
+
+        private readonly Dictionary<string, Func<HubLifetimeManager<ClientHub>, HubMethodInvocationMessage, Task>>
+            _clientHubActions =
+                new Dictionary<string, Func<HubLifetimeManager<ClientHub>, HubMethodInvocationMessage, Task>>
+                {
+                    {"invokeconnectionasync", InvokeConnectionAsync},
+                    {"invokeallasync", InvokeAllAsync},
+                    {"invokeallexceptasync", InvokeAllExceptAsync},
+                    {"invokegroupasync", InvokeGroupAsync},
+                    {"addgroupasync", AddGroupAsync},
+                    {"removegroupasync", RemoveGroupAsync}
+                };
 
         private readonly IHubConnectionRouter _router;
         private readonly IHubLifetimeManagerFactory _hubLifetimeManagerFactory;
@@ -60,7 +75,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                 new InvocationMessage(Guid.NewGuid().ToString(), true, OnDisconnectedMethodName, null, new object[0]));
         }
 
-        public async Task PassThruClientMessage(string hubName, HubConnectionContext context, HubMethodInvocationMessage message)
+        public async Task PassThruClientMessage(string hubName, HubConnectionContext context,
+            HubMethodInvocationMessage message)
         {
             var targetConnId = context.GetTargetConnectionId();
 
@@ -73,13 +89,13 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             {
                 // Add original connection Id to message metadata
                 message.AddConnectionId(context.ConnectionId);
-                await ((DefaultHubLifetimeManager<ServerHub>)serverHubManager).SendMessageAsync(targetConnId, message);
+                await ((DefaultHubLifetimeManager<ServerHub>) serverHubManager).SendMessageAsync(targetConnId, message);
             }
         }
 
         #endregion
 
-        #region Server connections
+        #region Server Connections
 
         public async Task OnServerConnectedAsync(string hubName, HubConnectionContext context)
         {
@@ -102,33 +118,19 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             // TODO: Disconnect all client connections routing to this server
         }
 
-        public async Task PassThruServerMessage(string hubName, HubConnectionContext context, HubMethodInvocationMessage message)
+        public async Task PassThruServerMessage(string hubName, HubConnectionContext context,
+            HubMethodInvocationMessage message)
         {
             if (_clientHubManagerDict.TryGetValue(hubName, out var clientHubManager))
             {
-                // Invoke a single connection
-                if (message.TryGetConnectionId(out var connectionId))
+                if (message.TryGetAction(out var actionName))
                 {
-                    await clientHubManager.InvokeConnectionAsync(connectionId, message.Target,
-                        message.Arguments);
+                    if (!string.IsNullOrEmpty(actionName) &&
+                        _clientHubActions.TryGetValue(actionName.ToLower(), out var action))
+                    {
+                        await action.Invoke(clientHubManager, message);
+                    }
                 }
-                // Invoke a group
-                else if (message.TryGetGroupName(out var groupName))
-                {
-                    await clientHubManager.InvokeGroupAsync(groupName, message.Target,
-                        message.Arguments);
-                }
-                // Invoke all except
-                else if (message.TryGetExcludedIds(out var excludedIds))
-                {
-                    await clientHubManager.InvokeAllExceptAsync(message.Target, message.Arguments,
-                        excludedIds);
-                }
-                // Invoke all
-                else
-                {
-                    await clientHubManager.InvokeAllAsync(message.Target, message.Arguments);
-                }                
             }
         }
 
@@ -138,7 +140,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             {
                 if (message.TryGetConnectionId(out var connectionId))
                 {
-                    await ((DefaultHubLifetimeManager<ClientHub>)clientHubManager).SendMessageAsync(connectionId, message);
+                    await ((DefaultHubLifetimeManager<ClientHub>) clientHubManager).SendMessageAsync(connectionId,
+                        message);
                 }
             }
         }
@@ -156,12 +159,73 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
         private HubLifetimeManager<ServerHub> GetOrAddServerHubManager(string hubName)
         {
             // ConcurrentDictionary.TryGetValue is lock free
-            return _serverHubManagerDict.GetOrAdd(hubName, _ => _hubLifetimeManagerFactory.Create<ServerHub>($"server.{hubName}"));
+            return _serverHubManagerDict.GetOrAdd(hubName,
+                _ => _hubLifetimeManagerFactory.Create<ServerHub>($"server.{hubName}"));
         }
 
         private HubLifetimeManager<ClientHub> GetOrAddClientHubManager(string hubName)
         {
-            return _clientHubManagerDict.GetOrAdd(hubName, _ => _hubLifetimeManagerFactory.Create<ClientHub>($"client.{hubName}"));
+            return _clientHubManagerDict.GetOrAdd(hubName,
+                _ => _hubLifetimeManagerFactory.Create<ClientHub>($"client.{hubName}"));
+        }
+
+        #endregion
+
+        #region Static Methods
+
+        private static async Task InvokeConnectionAsync(HubLifetimeManager<ClientHub> clientHubManager,
+            HubMethodInvocationMessage message)
+        {
+            if (message.TryGetConnectionId(out var connectionId))
+            {
+                await clientHubManager.InvokeConnectionAsync(connectionId, message.Target, message.Arguments);
+            }
+        }
+
+        private static async Task InvokeAllAsync(HubLifetimeManager<ClientHub> clientHubManager,
+            HubMethodInvocationMessage message)
+        {
+            await clientHubManager.InvokeAllAsync(message.Target, message.Arguments);
+        }
+
+        private static async Task InvokeAllExceptAsync(HubLifetimeManager<ClientHub> clientHubManager,
+            HubMethodInvocationMessage message)
+        {
+            if (message.TryGetExcludedIds(out var excludedIds))
+            {
+                await clientHubManager.InvokeAllExceptAsync(message.Target, message.Arguments,
+                    excludedIds);
+            }
+        }
+
+        private static async Task InvokeGroupAsync(HubLifetimeManager<ClientHub> clientHubManager,
+            HubMethodInvocationMessage message)
+        {
+            if (message.TryGetGroupName(out var groupName))
+            {
+                await clientHubManager.InvokeGroupAsync(groupName, message.Target,
+                    message.Arguments);
+            }
+        }
+
+        private static async Task AddGroupAsync(HubLifetimeManager<ClientHub> clientHubManager,
+            HubMethodInvocationMessage message)
+        {
+            if (message.TryGetGroupName(out var groupName) &&
+                message.TryGetConnectionId(out var connectionId))
+            {
+                await clientHubManager.AddGroupAsync(groupName, connectionId);
+            }
+        }
+
+        private static async Task RemoveGroupAsync(HubLifetimeManager<ClientHub> clientHubManager,
+            HubMethodInvocationMessage message)
+        {
+            if (message.TryGetGroupName(out var groupName) &&
+                message.TryGetConnectionId(out var connectionId))
+            {
+                await clientHubManager.RemoveGroupAsync(groupName, connectionId);
+            }
         }
 
         #endregion

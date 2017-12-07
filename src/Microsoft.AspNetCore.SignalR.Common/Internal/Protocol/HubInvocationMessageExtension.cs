@@ -7,7 +7,8 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 {
     public static class HubInvocationMessageExtension
     {
-        public static TMessage AddMetadata<TMessage>(this TMessage message, IDictionary<string, string> metadata) where TMessage : HubInvocationMessage
+        public static TMessage AddMetadata<TMessage>(this TMessage message, IDictionary<string, string> metadata)
+            where TMessage : HubInvocationMessage
         {
             if (message == null || metadata == null) return message;
             foreach (var kvp in metadata)
@@ -16,6 +17,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             }
             return message;
         }
+
         public static TMessage AddMetadata<TMessage>(this TMessage message, string key, string value)
             where TMessage : HubInvocationMessage
         {
@@ -26,20 +28,22 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             return message;
         }
 
-        public static bool TryGetProperty<TMessage>(this TMessage message, string propertyName, out string propertyValue) where TMessage : HubInvocationMessage
+        public static bool TryGetMetadata<TMessage>(this TMessage message, string metadataName, out string metadataValue)
+            where TMessage : HubInvocationMessage
         {
-            if (message.Metadata == null)
+            if (message.Metadata != null &&
+                message.Metadata.TryGetValue(metadataName, out metadataValue))
             {
-                propertyValue = null;
-                return false;
+                return true;
             }
-            return message.Metadata.TryGetValue(propertyName, out propertyValue);
+            metadataValue = null;
+            return false;
         }
 
-        public static TMessage AddConnectionId<TMessage>(this TMessage message, string connectionId) where TMessage : HubInvocationMessage
+        public static TMessage AddConnectionId<TMessage>(this TMessage message, string connectionId)
+            where TMessage : HubInvocationMessage
         {
-            message.Metadata.Add(HubInvocationMessage.ConnectionIdKeyName, connectionId);
-            return message;
+            return message.AddMetadata(HubInvocationMessage.ConnectionIdKeyName, connectionId);
         }
 
         public static string GetConnectionId<TMessage>(this TMessage message) where TMessage : HubInvocationMessage
@@ -48,53 +52,53 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             return connectionId;
         }
 
-        public static bool TryGetConnectionId<TMessage>(this TMessage message, out string propertyValue) where TMessage : HubInvocationMessage
+        public static bool TryGetConnectionId<TMessage>(this TMessage message, out string connectionId)
+            where TMessage : HubInvocationMessage
         {
-            if (message.Metadata == null)
-            {
-                propertyValue = null;
-                return false;
-            }
-            return message.Metadata.TryGetValue(HubInvocationMessage.ConnectionIdKeyName, out propertyValue);
+            return message.TryGetMetadata(HubInvocationMessage.ConnectionIdKeyName, out connectionId);
         }
 
-        public static TMessage AddGroupName<TMessage>(this TMessage message, string groupName) where TMessage : HubInvocationMessage
+        public static TMessage AddGroupName<TMessage>(this TMessage message, string groupName)
+            where TMessage : HubInvocationMessage
         {
-            message.Metadata.Add(HubInvocationMessage.GroupNameKeyName, groupName);
-            return message;
+            return message.AddMetadata(HubInvocationMessage.GroupNameKeyName, groupName);
         }
 
-        public static bool TryGetGroupName<TMessage>(this TMessage message, out string propertyValue) where TMessage : HubInvocationMessage
+        public static bool TryGetGroupName<TMessage>(this TMessage message, out string groupName)
+            where TMessage : HubInvocationMessage
         {
-            if (message.Metadata == null)
-            {
-                propertyValue = null;
-                return false;
-            }
-            return message.Metadata.TryGetValue(HubInvocationMessage.GroupNameKeyName, out propertyValue);
+            return message.TryGetMetadata(HubInvocationMessage.GroupNameKeyName, out groupName);
         }
 
-        public static TMessage AddExcludedIds<TMessage>(this TMessage message, IReadOnlyList<string> excludedIds) where TMessage : HubInvocationMessage
+        public static TMessage AddExcludedIds<TMessage>(this TMessage message, IReadOnlyList<string> excludedIds)
+            where TMessage : HubInvocationMessage
         {
-            message.Metadata.Add(HubInvocationMessage.ExcludedIdsKeyName, System.String.Join(",", excludedIds));
-            return message;
+            return message.AddMetadata(HubInvocationMessage.ExcludedIdsKeyName, string.Join(",", excludedIds));
         }
 
-        public static bool TryGetExcludedIds<TMessage>(this TMessage message, out IReadOnlyList<string> propertyValue) where TMessage : HubInvocationMessage
+        public static bool TryGetExcludedIds<TMessage>(this TMessage message, out IReadOnlyList<string> excludedIdList)
+            where TMessage : HubInvocationMessage
         {
-            if (message.Metadata == null)
+            if (message.TryGetMetadata(HubInvocationMessage.ExcludedIdsKeyName, out var value))
             {
-                propertyValue = null;
-                return false;
-            }
-            string value;
-            if (message.Metadata.TryGetValue(HubInvocationMessage.ExcludedIdsKeyName, out value))
-            {
-                propertyValue = new List<string>(value.Split(','));
+                excludedIdList = new List<string>(value.Split(','));
                 return true;
             }
-            propertyValue = null;
+
+            excludedIdList = null;
             return false;
+        }
+
+        public static TMessage AddAction<TMessage>(this TMessage message, string actionName)
+            where TMessage : HubInvocationMessage
+        {
+            return message.AddMetadata(HubInvocationMessage.ActionKeyName, actionName);
+        }
+
+        public static bool TryGetAction<TMessage>(this TMessage message, out string actionName)
+            where TMessage : HubInvocationMessage
+        {
+            return message.TryGetMetadata(HubInvocationMessage.ActionKeyName, out actionName);
         }
     }
 }
