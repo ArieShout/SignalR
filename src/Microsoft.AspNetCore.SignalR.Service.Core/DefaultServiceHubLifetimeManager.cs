@@ -37,8 +37,12 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             }
 
             _groups.Add(connection, groupName);
-
-            return Task.CompletedTask;
+            // Ask SignalR Service to do 'AddGroupAsync'
+            InvocationMessage message = CreateInvocationMessage(nameof(AddGroupAsync), new object[0]);
+            message.AddAction(nameof(AddGroupAsync));
+            message.AddConnectionId(connectionId);
+            message.AddGroupName(groupName);
+            return WriteAsync(connection, message);
         }
 
         public override Task InvokeAllAsync(string methodName, object[] args)
@@ -47,13 +51,17 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             // Here, we choose the first connection.
             HubConnectionContext connection = _connections.ElementAt(0);
             InvocationMessage message = CreateInvocationMessage(methodName, args);
+            message.AddAction(nameof(InvokeAllAsync));
             return WriteAsync(connection, message);
         }
 
         public override Task InvokeAllExceptAsync(string methodName, object[] args, IReadOnlyList<string> excludedIds)
         {
             HubConnectionContext connection = _connections.ElementAt(0);
-            InvocationMessage message = CreateInvocationMessageWithExcludedIds(connection, excludedIds, methodName, args);
+            InvocationMessage message = CreateInvocationMessage(methodName, args);
+            message.AddAction(nameof(InvokeAllExceptAsync));
+            message.AddExcludedIds(excludedIds);
+
             return WriteAsync(connection, message);
         }
 
@@ -70,7 +78,9 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             {
                 return Task.CompletedTask;
             }
-            InvocationMessage message = CreateInvocationMessageWithConnectionId(connection, methodName, args);
+            InvocationMessage message = CreateInvocationMessage(methodName, args);
+            message.AddAction(nameof(InvokeConnectionAsync));
+            message.AddConnectionId(connectionId);
             return WriteAsync(connection, message);
         }
 
@@ -85,7 +95,9 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             if (group != null)
             {
                 HubConnectionContext connection = group.Values.ElementAt(0);
-                InvocationMessage message = CreateInvocationMessageWithGroupName(connection, groupName, methodName, args);
+                InvocationMessage message = CreateInvocationMessage(methodName, args);
+                message.AddAction(nameof(InvokeGroupAsync));
+                message.AddGroupName(groupName);
                 return WriteAsync(connection, message);
             }
 
@@ -128,8 +140,12 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             }
 
             _groups.Remove(connectionId, groupName);
-
-            return Task.CompletedTask;
+            // Ask SignalR Service to do 'RemoveGroupAsync'
+            InvocationMessage message = CreateInvocationMessage(nameof(RemoveGroupAsync), new object[0]);
+            message.AddAction(nameof(RemoveGroupAsync));
+            message.AddConnectionId(connectionId);
+            message.AddGroupName(groupName);
+            return WriteAsync(connection, message);
         }
 
         private async Task WriteAsync(HubConnectionContext connection, HubInvocationMessage hubMessage)
@@ -154,28 +170,6 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             var invocationMessage = new InvocationMessage(GetInvocationId(),
                 nonBlocking: false, target: methodName,
                 argumentBindingException: null, arguments: args);
-            return invocationMessage;
-        }
-
-        private InvocationMessage CreateInvocationMessageWithConnectionId(HubConnectionContext connection, string methodName, object[] args)
-        {
-            var invocationMessage = CreateInvocationMessage(methodName, args);
-            invocationMessage.AddConnectionId(connection.ConnectionId);
-            return invocationMessage;
-        }
-
-        private InvocationMessage CreateInvocationMessageWithGroupName(HubConnectionContext connection, string groupName, string methodName, object[] args)
-        {
-            var invocationMessage = CreateInvocationMessage(methodName, args);
-            invocationMessage.AddGroupName(groupName);
-            return invocationMessage;
-        }
-
-        private InvocationMessage CreateInvocationMessageWithExcludedIds(HubConnectionContext connection, IReadOnlyList<string> excludedIds,
-            string methodName, object[] args)
-        {
-            var invocationMessage = CreateInvocationMessage(methodName, args);
-            invocationMessage.AddExcludedIds(excludedIds);
             return invocationMessage;
         }
     }
