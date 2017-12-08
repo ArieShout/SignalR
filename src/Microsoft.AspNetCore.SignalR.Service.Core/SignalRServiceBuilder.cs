@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceCore
+namespace Microsoft.AspNetCore.SignalR.Service.Core
 {
     public class SignalRServiceBuilder : ISignalRServiceBuilder
     {

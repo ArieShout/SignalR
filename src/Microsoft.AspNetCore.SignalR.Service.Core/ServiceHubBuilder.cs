@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceCore
+namespace Microsoft.AspNetCore.SignalR.Service.Core
 {
     public class ServiceHubBuilder
     {
@@ -19,10 +19,10 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
             ApplicationServices = applicationServices;
         }
 
-        public async void BuildServiceHub<THub>(string path, LogLevel consoleLogLevel = LogLevel.Information) where THub : Hub
+        public async void BuildServiceHub<THub>(string path) where THub : Hub
         {
             ServiceHubEndPoint<THub> endPoint = this.ApplicationServices.GetRequiredService<ServiceHubEndPoint<THub>>();
-            endPoint.UseHub(path, consoleLogLevel);
+            endPoint.UseHub(path);
             await endPoint.StartAsync();
         }
     }

@@ -18,38 +18,45 @@ using Microsoft.AspNetCore.SignalR.Client.Internal;
 using Microsoft.AspNetCore.SignalR.Core.Internal;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using System.Security.Claims;
+using Microsoft.Extensions.Options;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceCore
+namespace Microsoft.AspNetCore.SignalR.Service.Core
 {
     public class ServiceHubEndPoint<THub> : IInvocationBinder where THub : Hub
     {
         private static readonly string OnClientConnectedMethod = "OnConnectedAsync";
         private static readonly string OnDisconnectedAsyncMethod = "OnDisconnectedAsync";
-        private readonly ILogger<ServiceHubEndPoint<THub>> _logger;
         private readonly HubLifetimeManager<THub> _lifetimeMgr;
         private HubConnection _hubConnection;
+        private readonly ILogger<ServiceHubEndPoint<THub>> _logger;
+        private readonly IOptions<ServiceHubOptions> _hubOptions;
         // This HubConnectionList is duplicate with HubLifetimeManager
         private readonly HubConnectionList _connections = new HubConnectionList();
         private readonly IHubContext<THub> _hubContext;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly Dictionary<string, HubMethodDescriptor> _methods = new Dictionary<string, HubMethodDescriptor>(StringComparer.OrdinalIgnoreCase);
         public ServiceHubEndPoint(HubLifetimeManager<THub> lifetimeMgr,
-            ILogger<ServiceHubEndPoint<THub>> logger,
+            IOptions<ServiceHubOptions> hubOptions,
             IServiceScopeFactory serviceScopeFactory,
             IHubContext<THub> hubContext)
         {
             _lifetimeMgr = lifetimeMgr;
+            _hubOptions = hubOptions;
+
             _serviceScopeFactory = serviceScopeFactory;
-            _logger = logger;
+            var loggerFactory = new LoggerFactory();
+            loggerFactory.AddConsole(_hubOptions.Value.ConsoleLogLevel);
+            _logger = loggerFactory.CreateLogger<ServiceHubEndPoint<THub>>(); ;
             _hubContext = hubContext;
             DiscoverHubMethods();
         }
 
-        public void UseHub(string path, LogLevel logLevel = LogLevel.Information)
+        public void UseHub(string path)
         {
+            
             _hubConnection = new HubConnectionBuilder()
                                 .WithHubBinder(this)
-                                .WithConsoleLogger(logLevel) // Debug purpose
+                                .WithConsoleLogger(_hubOptions.Value.ConsoleLogLevel) // Debug purpose
                                 .WithUrl(path)
                                 .Build();
             var output = Channel.CreateUnbounded<HubMessage>();

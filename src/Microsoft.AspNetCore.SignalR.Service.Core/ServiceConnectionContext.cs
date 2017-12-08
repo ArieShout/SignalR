@@ -6,7 +6,7 @@ using System.Threading.Channels;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Sockets;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceCore
+namespace Microsoft.AspNetCore.SignalR.Service.Core
 {
     public class ServiceConnectionContext : ConnectionContext
     {

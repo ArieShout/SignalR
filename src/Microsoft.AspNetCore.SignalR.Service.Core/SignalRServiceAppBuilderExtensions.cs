@@ -3,7 +3,7 @@
 
 using System;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.AspNetCore.SignalR.ServiceCore;
+using Microsoft.AspNetCore.SignalR.Service.Core;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.Builder

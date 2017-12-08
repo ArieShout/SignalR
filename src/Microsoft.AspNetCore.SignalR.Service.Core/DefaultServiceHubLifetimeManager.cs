@@ -10,7 +10,7 @@ using System.Linq;
 using Microsoft.AspNetCore.SignalR;
 using System.Threading;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceCore
+namespace Microsoft.AspNetCore.SignalR.Service.Core
 {
     public class DefaultServiceHubLifetimeManager<THub> : HubLifetimeManager<THub>
     {

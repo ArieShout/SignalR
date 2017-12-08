@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.SignalR.Internal;
 using Microsoft.AspNetCore.Sockets;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.AspNetCore.SignalR.ServiceCore;
+using Microsoft.AspNetCore.SignalR.Service.Core;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -15,11 +15,12 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static ISignalRServiceBuilder AddSignalRService(this IServiceCollection services)
         {
-            return services.AddSignalRServiceCore();
+            return services.AddSignalRService(_ => { });
         }
 
-        public static ISignalRServiceBuilder AddSignalRServiceCore(this IServiceCollection services)
+        public static ISignalRServiceBuilder AddSignalRService(this IServiceCollection services, Action<ServiceHubOptions> configure)
         {
+            services.Configure(configure);
             services.AddSingleton(typeof(HubLifetimeManager<>), typeof(DefaultServiceHubLifetimeManager<>));
             services.AddSingleton(typeof(IHubContext<>), typeof(HubContext<>));
             services.AddSingleton(typeof(ServiceHubEndPoint<>), typeof(ServiceHubEndPoint<>));

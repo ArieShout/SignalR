@@ -6,7 +6,7 @@ using System.Threading.Channels;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 
-namespace Microsoft.AspNetCore.SignalR.ServiceCore
+namespace Microsoft.AspNetCore.SignalR.Service.Core
 {
     public class ServiceHubConnectionContext : HubConnectionContext
     {

@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Sockets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.SignalR.ServiceCore;
+using Microsoft.AspNetCore.SignalR.Service.Core;
 using SocketsSample.Hubs;
 
 namespace SocketsSample
@@ -35,7 +35,24 @@ namespace SocketsSample
         {
             //services.AddSockets();
 
-            services.AddSignalRService();
+            LogLevel logLevel = LogLevel.Information;
+            string consoleLogLevel = Configuration.GetSection("SignalRServerService").GetValue<string>("ConsoleLogLevel");
+            switch (consoleLogLevel)
+            {
+                case "Debug":
+                    logLevel = LogLevel.Debug;
+                    break;
+                case "Information":
+                    logLevel = LogLevel.Information;
+                    break;
+                case "Trace":
+                    logLevel = LogLevel.Trace;
+                    break;
+                default:
+                    logLevel = LogLevel.Information;
+                    break;
+            }
+            services.AddSignalRService(hubOption => { hubOption.ConsoleLogLevel = logLevel; });
             services.AddCors(o =>
             {
                 o.AddPolicy("Everything", p =>
@@ -63,24 +80,10 @@ namespace SocketsSample
             app.UseSignalRService(configHub =>
             {
                 string signalrServicePath = Configuration.GetSection("SignalRServerService").GetValue<string>("RootPath");
-                string consoleLogLevel = Configuration.GetSection("SignalRServerService").GetValue<string>("ConsoleLogLevel");
-                LogLevel logLevel = LogLevel.Information;
-                if ("Debug".Equals(consoleLogLevel))
-                {
-                    logLevel = LogLevel.Debug;
-                }
-                else if ("Information".Equals(consoleLogLevel))
-                {
-                    logLevel = LogLevel.Information;
-                }
-                else if ("Trace".Equals(consoleLogLevel))
-                {
-                    logLevel = LogLevel.Trace;
-                }
-                configHub.BuildServiceHub<Chat>(signalrServicePath + "/server/default", logLevel);
-                configHub.BuildServiceHub<DynamicChat>(signalrServicePath + "/server/dynamic", logLevel);
-                configHub.BuildServiceHub<Streaming>(signalrServicePath + "/server/streaming", logLevel);
-                configHub.BuildServiceHub<HubTChat>(signalrServicePath + "/server/hubT", logLevel);
+                configHub.BuildServiceHub<Chat>(signalrServicePath + "/server/default");
+                configHub.BuildServiceHub<DynamicChat>(signalrServicePath + "/server/dynamic");
+                configHub.BuildServiceHub<Streaming>(signalrServicePath + "/server/streaming");
+                configHub.BuildServiceHub<HubTChat>(signalrServicePath + "/server/hubT");
             });
         }
     }

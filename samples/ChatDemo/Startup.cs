@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using System;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,7 +23,24 @@ namespace MyChat
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSignalRService();
+            LogLevel logLevel = LogLevel.Information;
+            string consoleLogLevel = Configuration.GetSection("SignalRServerService").GetValue<string>("ConsoleLogLevel");
+            switch (consoleLogLevel)
+            {
+                case "Debug":
+                    logLevel = LogLevel.Debug;
+                    break;
+                case "Information":
+                    logLevel = LogLevel.Information;
+                    break;
+                case "Trace":
+                    logLevel = LogLevel.Trace;
+                    break;
+                default:
+                    logLevel = LogLevel.Information;
+                    break;
+            }
+            services.AddSignalRService(hubOption => { hubOption.ConsoleLogLevel = logLevel; });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -36,21 +54,7 @@ namespace MyChat
             app.UseSignalRService(configHub =>
             {
                 string signalrServicePath = Configuration.GetSection("SignalRServerService").GetValue<string>("RootPath");
-                string consoleLogLevel = Configuration.GetSection("SignalRServerService").GetValue<string>("ConsoleLogLevel");
-                LogLevel logLevel = LogLevel.Information;
-                if ("Debug".Equals(consoleLogLevel))
-                {
-                    logLevel = LogLevel.Debug;
-                }
-                else if ("Information".Equals(consoleLogLevel))
-                {
-                    logLevel = LogLevel.Information;
-                }
-                else if ("Trace".Equals(consoleLogLevel))
-                {
-                    logLevel = LogLevel.Trace;
-                }
-                configHub.BuildServiceHub<ChatHub>(signalrServicePath + "/server/chat", logLevel);
+                configHub.BuildServiceHub<ChatHub>(signalrServicePath + "/server/chat");
             });
         }
     }
