@@ -34,23 +34,10 @@ namespace SocketsSample
         public void ConfigureServices(IServiceCollection services)
         {
             //services.AddSockets();
-
-            LogLevel logLevel = LogLevel.Information;
-            string consoleLogLevel = Configuration.GetSection("SignalRServerService").GetValue<string>("ConsoleLogLevel");
-            switch (consoleLogLevel)
+            var consoleLogLevel = Configuration["SignalRServerService:ConsoleLogLevel"];
+            if (!Enum.TryParse<LogLevel>(consoleLogLevel, true, out var logLevel))
             {
-                case "Debug":
-                    logLevel = LogLevel.Debug;
-                    break;
-                case "Information":
-                    logLevel = LogLevel.Information;
-                    break;
-                case "Trace":
-                    logLevel = LogLevel.Trace;
-                    break;
-                default:
-                    logLevel = LogLevel.Information;
-                    break;
+                logLevel = LogLevel.Information;
             }
             int serviceConnectionNo = Configuration.GetSection("SignalRServerService").GetValue<int>("ServiceConnectionNo");
             services.AddSignalRService(hubOption => {
@@ -83,7 +70,7 @@ namespace SocketsSample
 
             app.UseSignalRService(configHub =>
             {
-                string signalrServicePath = Configuration.GetSection("SignalRServerService").GetValue<string>("RootPath");
+                string signalrServicePath = Configuration["SignalRServerService:RootPath"];
                 configHub.BuildServiceHub<Chat>(signalrServicePath + "/server/default");
                 configHub.BuildServiceHub<DynamicChat>(signalrServicePath + "/server/dynamic");
                 configHub.BuildServiceHub<Streaming>(signalrServicePath + "/server/streaming");
