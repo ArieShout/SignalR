@@ -2,7 +2,7 @@
 
 namespace MyChat
 {
-    public class ChatHub : Hub
+    public class Chat : Hub
     {
         public void broadcastMessage(string name, string message)
         {

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace ChatSample
+namespace SignalRServiceSample
 {
     public class Startup
     {
@@ -33,7 +33,11 @@ namespace ChatSample
         public void ConfigureServices(IServiceCollection services)
         {
             // To use Redis scaleout uncomment .AddRedis2
-            services.AddSignalRServiceServer()
+            services.AddSignalRServiceServer(options =>
+                {
+                    options.AudienceProvider = () => new[] {Configuration["Auth:JWT:Audience"]};
+                    options.SigningKeyProvider = () => new[] {Configuration["Auth:JWT:IssuerSigningKey"]};
+                })
                 //.AddRedis2()
                 ;
         }

@@ -22,5 +22,7 @@
     <PackageReference Include="System.Reflection.Emit" Version="$(SystemReflectionEmitPackageVersion)" />
     <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonPackageVersion)" />
     <PackageReference Include="Microsoft.Extensions.ValueStopwatch.Sources" Version="$(MicrosoftExtensionsValueStopwatchSourcesPackageVersion)" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="5.2.0-preview1-408290725" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="5.2.0-preview1-408290725" />
   </ItemGroup>
 </Project>

@@ -2,12 +2,14 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Core;
 using Microsoft.AspNetCore.SignalR.Internal;
 using Microsoft.AspNetCore.SignalR.Service.Server;
 using Microsoft.AspNetCore.Sockets;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -18,9 +20,15 @@ namespace Microsoft.Extensions.DependencyInjection
             return AddSignalRServiceServer(services, _ => { });
         }
 
-        public static ISignalRBuilder AddSignalRServiceServer(this IServiceCollection services, Action<HubOptions> configure)
+        public static ISignalRBuilder AddSignalRServiceServer(this IServiceCollection services, Action<SignalRServiceOptions> configure)
         {
             services.Configure(configure);
+
+            services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureSignalRServiceOptions>();
+
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer();
+
             services.AddSockets2();
             return services.AddSignalRCore2();
         }

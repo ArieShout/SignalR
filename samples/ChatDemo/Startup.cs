@@ -25,7 +25,7 @@ namespace MyChat
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            var consoleLogLevel = Configuration["SignalRServerService:ConsoleLogLevel"];
+            var consoleLogLevel = Configuration["SignalRService:ConsoleLogLevel"];
             if (!Enum.TryParse<LogLevel>(consoleLogLevel, true, out var logLevel))
             {
                 logLevel = LogLevel.Information;
@@ -41,11 +41,8 @@ namespace MyChat
                 app.UseDeveloperExceptionPage();
             }
             app.UseFileServer();
-            app.UseSignalRService(configHub =>
-            {
-                var signalrServicePath = Configuration["SignalRServerService:RootPath"];
-                configHub.BuildServiceHub<ChatHub>(signalrServicePath + "/server/chat");
-            });
+            app.UseSignalRService(Configuration["SignalRService:ConnectionString"],
+                routes => { routes.MapHub<Chat>("chat"); });
         }
     }
 }

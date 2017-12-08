@@ -52,7 +52,7 @@ function browserifyModuleES5(sourceFileName, namespace, targetFileName, hasAsync
 }
 
 gulp.task('browserify-client', ['compile-ts-client'], () => {
-    return browserifyModule('HubConnection.js', 'signalR', 'signalr-client.js');
+    return browserifyModule('ServiceConnection.js', 'signalR', 'signalr-client.js');
 });
 
 gulp.task('browserify-msgpackprotocol', ['compile-ts-client'], () => {
@@ -60,7 +60,7 @@ gulp.task('browserify-msgpackprotocol', ['compile-ts-client'], () => {
 });
 
 gulp.task('browserify-clientES5', ['compile-ts-client'], () => {
-    return browserifyModuleES5('HubConnection.js', 'signalR', 'signalr-clientES5.js', /*hasAsync*/ true);
+    return browserifyModuleES5('ServiceConnection.js', 'signalR', 'signalr-clientES5.js', /*hasAsync*/ true);
 });
 
 gulp.task('browserify-msgpackprotocolES5', ['compile-ts-client'], () => {

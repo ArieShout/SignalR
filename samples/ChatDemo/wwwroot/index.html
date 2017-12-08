@@ -57,7 +57,7 @@
             messageInput.focus();
 
             // Start the connection.
-            startConnection('http://' + window.location.hostname + ':5001/client/chat', function (connection) {
+            startConnection('/chat', function (connection) {
                 var messageCallback = function (name, message) {
                     // Html encode display name and message.
                     var encodedName = name;
@@ -111,17 +111,17 @@
             // any of the available transports the function will return a rejected Promise.
             function startConnection(url, configureConnection) {
                 return function start(transport) {
-                    console.log(`Starting connection using ${signalR.TransportType[transport]} transport`)
-                    var connection = new signalR.HubConnection(url, { transport: transport });
+                    console.log(`Starting connection using ${signalR.TransportType[transport]} transport`);
+                    var connection = new signalR.ServiceConnection(url, { transport: transport });
                     if (configureConnection && typeof configureConnection === 'function') {
                         configureConnection(connection);
                     }
 
                     return connection.start()
-                        .then(function () {
+                        .then(function() {
                             return connection;
                         })
-                        .catch(function (error) {
+                        .catch(function(error) {
                             console.log(`Cannot start the connection use ${signalR.TransportType[transport]} transport. ${error.message}`);
                             if (transport !== signalR.TransportType.LongPolling) {
                                 return start(transport + 1);

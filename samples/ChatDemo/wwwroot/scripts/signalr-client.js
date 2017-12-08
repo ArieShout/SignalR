@@ -340,7 +340,7 @@ class HttpConnection {
 }
 exports.HttpConnection = HttpConnection;
 
-},{"./HttpClient":3,"./ILogger":7,"./Loggers":9,"./Transports":11}],5:[function(require,module,exports){
+},{"./HttpClient":3,"./ILogger":7,"./Loggers":9,"./Transports":12}],5:[function(require,module,exports){
 "use strict";
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
@@ -584,7 +584,7 @@ class HubConnection {
 }
 exports.HubConnection = HubConnection;
 
-},{"./Base64EncodedHubProtocol":1,"./Formatters":2,"./HttpConnection":4,"./ILogger":7,"./JsonHubProtocol":8,"./Loggers":9,"./Observable":10,"./Transports":11}],7:[function(require,module,exports){
+},{"./Base64EncodedHubProtocol":1,"./Formatters":2,"./HttpConnection":4,"./ILogger":7,"./JsonHubProtocol":8,"./Loggers":9,"./Observable":10,"./Transports":12}],7:[function(require,module,exports){
 "use strict";
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
@@ -714,6 +714,110 @@ class Subject {
 exports.Subject = Subject;
 
 },{}],11:[function(require,module,exports){
+"use strict";
+// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const HttpClient_1 = require("./HttpClient");
+const ILogger_1 = require("./ILogger");
+const Loggers_1 = require("./Loggers");
+const HubConnection_1 = require("./HubConnection");
+var Transports_1 = require("./Transports");
+exports.TransportType = Transports_1.TransportType;
+var HttpConnection_1 = require("./HttpConnection");
+exports.HttpConnection = HttpConnection_1.HttpConnection;
+var HubConnection_2 = require("./HubConnection");
+exports.HubConnection = HubConnection_2.HubConnection;
+var JsonHubProtocol_1 = require("./JsonHubProtocol");
+exports.JsonHubProtocol = JsonHubProtocol_1.JsonHubProtocol;
+var ILogger_2 = require("./ILogger");
+exports.LogLevel = ILogger_2.LogLevel;
+var Loggers_2 = require("./Loggers");
+exports.ConsoleLogger = Loggers_2.ConsoleLogger;
+exports.NullLogger = Loggers_2.NullLogger;
+class ServiceConnection {
+    constructor(url, options = {}) {
+        this.url = "";
+        this.options = options || {};
+        this.url = url;
+        this.logger = Loggers_1.LoggerFactory.createLogger(options.logging);
+        // TODO: enable custom authorization
+        const httpClient = new HttpClient_1.HttpClient();
+        this.connectionPromise = httpClient.get(url)
+            .then(response => {
+            this.logger.log(ILogger_1.LogLevel.Information, "Successfully get service endpoint information.");
+            const endpoint = JSON.parse(response);
+            if (!this.options.jwtBearer) {
+                this.options.jwtBearer = () => endpoint.jwtBearer;
+            }
+            this.connection = new HubConnection_1.HubConnection(endpoint.serviceUrl, this.options);
+        })
+            .catch(error => {
+            this.logger.log(ILogger_1.LogLevel.Error, "Failed to get service endpoint information.");
+            Promise.reject(error);
+        });
+    }
+    start() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // TODO: find a better way to assure connection existence
+            yield this.connectionPromise;
+            return this.connection.start();
+        });
+    }
+    stop() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.connectionPromise;
+            return this.connection.stop();
+        });
+    }
+    stream(methodName, ...args) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.connectionPromise;
+            return this.connection.stream(methodName, ...args);
+        });
+    }
+    send(methodName, ...args) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.connectionPromise;
+            return this.connection.send(methodName, ...args);
+        });
+    }
+    invoke(methodName, ...args) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.connectionPromise;
+            return this.connection.invoke(methodName, ...args);
+        });
+    }
+    on(methodName, method) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.connectionPromise;
+            this.connection.on(methodName, method);
+        });
+    }
+    off(methodName, method) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.connectionPromise;
+            this.connection.off(methodName, method);
+        });
+    }
+    onclose(callback) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.connectionPromise;
+            this.connection.onclose(callback);
+        });
+    }
+}
+exports.ServiceConnection = ServiceConnection;
+
+},{"./HttpClient":3,"./HttpConnection":4,"./HubConnection":6,"./ILogger":7,"./JsonHubProtocol":8,"./Loggers":9,"./Transports":12}],12:[function(require,module,exports){
 "use strict";
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
@@ -958,5 +1062,5 @@ function send(httpClient, url, jwtBearer, data) {
     });
 }
 
-},{"./HttpError":5,"./ILogger":7}]},{},[6])(6)
+},{"./HttpError":5,"./ILogger":7}]},{},[11])(11)
 });

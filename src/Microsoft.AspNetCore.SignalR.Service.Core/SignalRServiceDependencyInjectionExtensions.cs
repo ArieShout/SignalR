@@ -3,10 +3,6 @@
 
 using System;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.AspNetCore.SignalR.Internal;
-using Microsoft.AspNetCore.Sockets;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.SignalR.Service.Core;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -25,7 +21,10 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton(typeof(IHubContext<>), typeof(HubContext<>));
             services.AddSingleton(typeof(ServiceHubEndPoint<>), typeof(ServiceHubEndPoint<>));
             services.AddScoped(typeof(IHubActivator<>), typeof(DefaultHubActivator<>));
+            services.AddSingleton(typeof(SignalRServiceAuthHelper));
+
             services.AddAuthorization();
+            services.AddRouting();
 
             return new SignalRServiceBuilder(services);
         }

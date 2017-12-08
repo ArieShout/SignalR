@@ -2,11 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.SignalR.Service.Core
 {
@@ -19,10 +15,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             ApplicationServices = applicationServices;
         }
 
-        public async void BuildServiceHub<THub>(string path) where THub : Hub
+        public async void BuildServiceHub<THub>(SignalRServiceConfiguration config) where THub : Hub
         {
-            ServiceHubEndPoint<THub> endPoint = this.ApplicationServices.GetRequiredService<ServiceHubEndPoint<THub>>();
-            endPoint.UseHub(path);
+            var endPoint = ApplicationServices.GetRequiredService<ServiceHubEndPoint<THub>>();
+            endPoint.UseHub(config);
             await endPoint.StartAsync();
         }
     }

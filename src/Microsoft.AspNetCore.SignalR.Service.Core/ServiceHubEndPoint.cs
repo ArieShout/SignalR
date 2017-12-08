@@ -15,47 +15,61 @@ using System.Threading.Tasks;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.SignalR.Internal;
-using Microsoft.AspNetCore.SignalR.Client.Internal;
 using Microsoft.AspNetCore.SignalR.Core.Internal;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using System.Security.Claims;
+using Microsoft.AspNetCore.SignalR.Client.Internal;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.SignalR.Service.Core
 {
     public class ServiceHubEndPoint<THub> : IInvocationBinder where THub : Hub
     {
-        private static readonly string OnClientConnectedMethod = "OnConnectedAsync";
-        private static readonly string OnDisconnectedAsyncMethod = "OnDisconnectedAsync";
+        private const string OnClientConnectedMethod = "OnConnectedAsync";
+        private const string OnDisconnectedAsyncMethod = "OnDisconnectedAsync";
+
         private List<HubConnection> _hubConnections = new List<HubConnection>();
         private readonly HubLifetimeManager<THub> _lifetimeMgr;
         private readonly ILogger<ServiceHubEndPoint<THub>> _logger;
         private readonly IOptions<ServiceHubOptions> _hubOptions;
-        private readonly ConcurrentDictionary<string, List<InvocationHandler>> _handlers = new ConcurrentDictionary<string, List<InvocationHandler>>();
+
+        private readonly ConcurrentDictionary<string, List<InvocationHandler>> _handlers =
+            new ConcurrentDictionary<string, List<InvocationHandler>>();
+
         // This HubConnectionList is duplicate with HubLifetimeManager
         private readonly HubConnectionList _connections = new HubConnectionList();
+
         private readonly IHubContext<THub> _hubContext;
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly Dictionary<string, HubMethodDescriptor> _methods = new Dictionary<string, HubMethodDescriptor>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly SignalRServiceAuthHelper _authHelper;
+
+        private readonly Dictionary<string, HubMethodDescriptor> _methods =
+            new Dictionary<string, HubMethodDescriptor>(StringComparer.OrdinalIgnoreCase);
+
         public ServiceHubEndPoint(HubLifetimeManager<THub> lifetimeMgr,
             IOptions<ServiceHubOptions> hubOptions,
             IServiceScopeFactory serviceScopeFactory,
-            IHubContext<THub> hubContext)
+            IHubContext<THub> hubContext,
+            SignalRServiceAuthHelper authHelper,
+            ILoggerFactory loggerFactory)
         {
             _lifetimeMgr = lifetimeMgr;
             _hubOptions = hubOptions;
-
             _serviceScopeFactory = serviceScopeFactory;
-            var loggerFactory = new LoggerFactory();
+            _authHelper = authHelper;
+
             loggerFactory.AddConsole(_hubOptions.Value.ConsoleLogLevel);
-            _logger = loggerFactory.CreateLogger<ServiceHubEndPoint<THub>>(); ;
+            _logger = loggerFactory.CreateLogger<ServiceHubEndPoint<THub>>();
+
             _hubContext = hubContext;
             DiscoverHubMethods();
         }
 
-        public void UseHub(string path)
+        public void UseHub(SignalRServiceConfiguration config)
         {
-            Channel<HubConnectionMessageWrapper> requestHandlingQ = Channel.CreateUnbounded<HubConnectionMessageWrapper>();
+            var requestHandlingQ = Channel.CreateUnbounded<HubConnectionMessageWrapper>();
+
             async Task WriteToTransport()
             {
                 try
@@ -73,32 +87,29 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     _logger.MessageQueueError(ex);
                 }
             }
+
             var writingOutputTask = WriteToTransport();
+
             for (int i = 0; i < _hubOptions.Value.ServiceConnectionNo; i++)
             {
-                HubConnection hubConnection = new HubConnectionBuilder()
-                                .WithHubBinder(this)
-                                .WithConsoleLogger(_hubOptions.Value.ConsoleLogLevel) // Debug purpose
-                                .WithUrl(path)
-                                .WithMessageQueue(requestHandlingQ)
-                                .Build();
+                var hubConnection = new HubConnectionBuilder()
+                    .WithHubBinder(this)
+                    .WithConsoleLogger(_hubOptions.Value.ConsoleLogLevel) // Debug purpose
+                    .WithUrl(_authHelper.GetServerUrl<THub>(config))
+                    .WithJwtBearer(() => _authHelper.GetServerToken(config))
+                    .WithMessageQueue(requestHandlingQ)
+                    .Build();
                 _hubConnections.Add(hubConnection);
             }
-            
-            On<HubConnectionMessageWrapper>(OnClientConnectedMethod, async (invocationMessage) =>
-            {
-                await HandleOnClientConnectedAsync(invocationMessage);
-            });
-            On<HubConnectionMessageWrapper>(OnDisconnectedAsyncMethod, async (invocationMessage) =>
-            {
-                await HandleOnDisconnectedAsync(invocationMessage);
-            });
+
+            On<HubConnectionMessageWrapper>(OnClientConnectedMethod,
+                async invocationMessage => { await HandleOnClientConnectedAsync(invocationMessage); });
+            On<HubConnectionMessageWrapper>(OnDisconnectedAsyncMethod,
+                async invocationMessage => { await HandleOnDisconnectedAsync(invocationMessage); });
             foreach (var hubMethod in _methods.Keys)
             {
-                On<HubConnectionMessageWrapper>(hubMethod, async (invocationMessage) =>
-                {
-                    await HandleHubCallAsync(invocationMessage);
-                });
+                On<HubConnectionMessageWrapper>(hubMethod,
+                    async invocationMessage => { await HandleHubCallAsync(invocationMessage); });
             }
         }
 
@@ -128,7 +139,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
                 if (_methods.ContainsKey(methodName))
                 {
-                    throw new NotSupportedException($"Duplicate definitions of '{methodName}'. Overloading is not supported.");
+                    throw new NotSupportedException(
+                        $"Duplicate definitions of '{methodName}'. Overloading is not supported.");
                 }
 
                 var executor = ObjectMethodExecutor.Create(methodInfo, hubTypeInfo);
@@ -198,11 +210,13 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             var connectionId = hubMethodInvocationMessage.GetConnectionId();
             ServiceConnectionContext serviceConnCtx = new ServiceConnectionContext(connectionId);
 
-            ServiceHubConnectionContext serviceHubConnCtx = new ServiceHubConnectionContext(serviceConnCtx, output, messageWrapper.HubConnection);
+            ServiceHubConnectionContext serviceHubConnCtx =
+                new ServiceHubConnectionContext(serviceConnCtx, output, messageWrapper.HubConnection);
             _connections.Add(serviceHubConnCtx);
             await _lifetimeMgr.OnConnectedAsync(serviceHubConnCtx);
             await HubOnConnectedAsync(serviceHubConnCtx);
-            await SendMessageAsync(serviceHubConnCtx, CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, ""));
+            await SendMessageAsync(serviceHubConnCtx,
+                CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, ""));
         }
 
         private async Task HandleOnDisconnectedAsync(HubConnectionMessageWrapper messageWrapper)
@@ -212,7 +226,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             HubConnectionContext serviceHubConnCtx = _connections[connectionId];
             await HubOnDisconnectedAsync(serviceHubConnCtx);
             await _lifetimeMgr.OnDisconnectedAsync(serviceHubConnCtx);
-            await SendMessageAsync(serviceHubConnCtx, CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, ""));
+            await SendMessageAsync(serviceHubConnCtx,
+                CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, ""));
         }
 
         private async Task HandleHubCallAsync(HubConnectionMessageWrapper messageWrapper)
@@ -227,7 +242,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     // Send an error to the client. Then let the normal completion process occur
                     _logger.UnknownHubMethod(hubMethodInvocationMessage.Target);
                     await SendMessageAsync(serviceHubConnCtx, CompletionMessage.WithError(
-                        hubMethodInvocationMessage.InvocationId, $"Unknown hub method '{hubMethodInvocationMessage.Target}'"));
+                        hubMethodInvocationMessage.InvocationId,
+                        $"Unknown hub method '{hubMethodInvocationMessage.Target}'"));
                 }
                 else
                 {
@@ -267,7 +283,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                 return;
             }
 
-            await SendMessageAsync(connection, CompletionMessage.WithError(hubMethodInvocationMessage.InvocationId, errorMessage));
+            await SendMessageAsync(connection,
+                CompletionMessage.WithError(hubMethodInvocationMessage.InvocationId, errorMessage));
         }
 
         private void InitializeHub(THub hub, HubConnectionContext hubConnection)
@@ -277,7 +294,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             hub.Groups = _hubContext.Groups;
         }
 
-        private async Task<bool> IsHubMethodAuthorized(IServiceProvider provider, ClaimsPrincipal principal, IList<IAuthorizeData> policies)
+        private async Task<bool> IsHubMethodAuthorized(IServiceProvider provider, ClaimsPrincipal principal,
+            IList<IAuthorizeData> policies)
         {
             // If there are no policies we don't need to run auth
             if (!policies.Any())
@@ -306,7 +324,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                 if (!hubMethodInvocationMessage.NonBlocking)
                 {
                     _logger.StreamingMethodCalledWithInvoke(hubMethodInvocationMessage);
-                    await SendMessageAsync(connection, CompletionMessage.WithError(hubMethodInvocationMessage.InvocationId,
+                    await SendMessageAsync(connection, CompletionMessage.WithError(
+                        hubMethodInvocationMessage.InvocationId,
                         $"The client attempted to invoke the streaming '{hubMethodInvocationMessage.Target}' method in a non-streaming fashion."));
                 }
 
@@ -327,7 +346,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         private static bool IsChannel(Type type, out Type payloadType)
         {
-            var channelType = type.AllBaseTypes().FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(ChannelReader<>));
+            var channelType = type.AllBaseTypes().FirstOrDefault(t =>
+                t.IsGenericType && t.GetGenericTypeDefinition() == typeof(ChannelReader<>));
             if (channelType == null)
             {
                 payloadType = null;
@@ -347,9 +367,9 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         private static bool IsStreamed(Type resultType)
         {
-            var observableInterface = IsIObservable(resultType) ?
-                resultType :
-                resultType.GetInterfaces().FirstOrDefault(IsIObservable);
+            var observableInterface = IsIObservable(resultType)
+                ? resultType
+                : resultType.GetInterfaces().FirstOrDefault(IsIObservable);
 
             if (observableInterface != null)
             {
@@ -373,7 +393,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             {
                 /* TODO: Authorization support
                 */
-                if (!await ValidateInvocationMode(methodExecutor.MethodReturnType, isStreamedInvocation, hubMethodInvocationMessage, connection))
+                if (!await ValidateInvocationMode(methodExecutor.MethodReturnType, isStreamedInvocation,
+                    hubMethodInvocationMessage, connection))
                 {
                     return;
                 }
@@ -393,8 +414,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     }
                     else if (!hubMethodInvocationMessage.NonBlocking)
                     {
-                        _logger.SendingResult(hubMethodInvocationMessage.InvocationId, methodExecutor.MethodReturnType.FullName);
-                        await SendMessageAsync(connection, CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, result));
+                        _logger.SendingResult(hubMethodInvocationMessage.InvocationId,
+                            methodExecutor.MethodReturnType.FullName);
+                        await SendMessageAsync(connection,
+                            CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, result));
                     }
                 }
                 catch (TargetInvocationException ex)
@@ -414,14 +437,15 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             }
         }
 
-        private static async Task<object> ExecuteHubMethod(ObjectMethodExecutor methodExecutor, THub hub, object[] arguments)
+        private static async Task<object> ExecuteHubMethod(ObjectMethodExecutor methodExecutor, THub hub,
+            object[] arguments)
         {
             // ReadableChannel is awaitable but we don't want to await it.
             if (methodExecutor.IsMethodAsync && !IsChannel(methodExecutor.MethodReturnType, out _))
             {
                 if (methodExecutor.MethodReturnType == typeof(Task))
                 {
-                    await (Task)methodExecutor.Execute(hub, arguments);
+                    await (Task) methodExecutor.Execute(hub, arguments);
                 }
                 else
                 {
@@ -439,24 +463,25 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         private IDisposable On<T1>(string methodName, Action<T1> handler)
         {
             return On(methodName,
-                new[] { typeof(T1) },
-                args => handler((T1)args[0]));
+                new[] {typeof(T1)},
+                args => handler((T1) args[0]));
         }
 
         private IDisposable On(string methodName, Type[] parameterTypes, Action<object[]> handler)
         {
             return On(methodName, parameterTypes, (parameters, state) =>
             {
-                var currentHandler = (Action<object[]>)state;
+                var currentHandler = (Action<object[]>) state;
                 currentHandler(parameters);
                 return Task.CompletedTask;
             }, handler);
         }
 
-        private IDisposable On(string methodName, Type[] parameterTypes, Func<object[], object, Task> handler, object state)
+        private IDisposable On(string methodName, Type[] parameterTypes, Func<object[], object, Task> handler,
+            object state)
         {
             var invocationHandler = new InvocationHandler(parameterTypes, handler, state);
-            var invocationList = _handlers.AddOrUpdate(methodName, _ => new List<InvocationHandler> { invocationHandler },
+            var invocationList = _handlers.AddOrUpdate(methodName, _ => new List<InvocationHandler> {invocationHandler},
                 (_, invocations) =>
                 {
                     lock (invocations)
@@ -492,7 +517,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             {
                 try
                 {
-                    await handler.InvokeAsync(new object[] { messageWrapper });
+                    await handler.InvokeAsync(new object[] {messageWrapper});
                 }
                 catch (Exception ex)
                 {

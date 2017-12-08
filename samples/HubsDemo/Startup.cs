@@ -68,13 +68,12 @@ namespace SocketsSample
 
             app.UseCors("Everything");
 
-            app.UseSignalRService(configHub =>
+            app.UseSignalRService(Configuration["SignalRServerService:ConnectionString"], routes =>
             {
-                string signalrServicePath = Configuration["SignalRServerService:RootPath"];
-                configHub.BuildServiceHub<Chat>(signalrServicePath + "/server/default");
-                configHub.BuildServiceHub<DynamicChat>(signalrServicePath + "/server/dynamic");
-                configHub.BuildServiceHub<Streaming>(signalrServicePath + "/server/streaming");
-                configHub.BuildServiceHub<HubTChat>(signalrServicePath + "/server/hubT");
+                routes.MapHub<Chat>("default");
+                routes.MapHub<DynamicChat>("dynamic");
+                routes.MapHub<Streaming>("streaming");
+                routes.MapHub<HubTChat>("hubT");
             });
         }
     }
