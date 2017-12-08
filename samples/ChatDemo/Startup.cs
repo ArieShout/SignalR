@@ -10,6 +10,7 @@ namespace MyChat
     public class Startup
     {
         public IConfigurationRoot Configuration { get; }
+
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
@@ -19,26 +20,15 @@ namespace MyChat
             builder.AddEnvironmentVariables();
             Configuration = builder.Build();
         }
+
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            LogLevel logLevel = LogLevel.Information;
-            string consoleLogLevel = Configuration.GetSection("SignalRServerService").GetValue<string>("ConsoleLogLevel");
-            switch (consoleLogLevel)
+            var consoleLogLevel = Configuration["SignalRServerService:ConsoleLogLevel"];
+            if (!Enum.TryParse<LogLevel>(consoleLogLevel, true, out var logLevel))
             {
-                case "Debug":
-                    logLevel = LogLevel.Debug;
-                    break;
-                case "Information":
-                    logLevel = LogLevel.Information;
-                    break;
-                case "Trace":
-                    logLevel = LogLevel.Trace;
-                    break;
-                default:
-                    logLevel = LogLevel.Information;
-                    break;
+                logLevel = LogLevel.Information;
             }
             services.AddSignalRService(hubOption => { hubOption.ConsoleLogLevel = logLevel; });
         }
@@ -53,7 +43,7 @@ namespace MyChat
             app.UseFileServer();
             app.UseSignalRService(configHub =>
             {
-                string signalrServicePath = Configuration.GetSection("SignalRServerService").GetValue<string>("RootPath");
+                var signalrServicePath = Configuration["SignalRServerService:RootPath"];
                 configHub.BuildServiceHub<ChatHub>(signalrServicePath + "/server/chat");
             });
         }
