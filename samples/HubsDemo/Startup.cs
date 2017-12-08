@@ -52,7 +52,11 @@ namespace SocketsSample
                     logLevel = LogLevel.Information;
                     break;
             }
-            services.AddSignalRService(hubOption => { hubOption.ConsoleLogLevel = logLevel; });
+            int serviceConnectionNo = Configuration.GetSection("SignalRServerService").GetValue<int>("ServiceConnectionNo");
+            services.AddSignalRService(hubOption => {
+                hubOption.ConsoleLogLevel = logLevel;
+                hubOption.ServiceConnectionNo = serviceConnectionNo;
+            });
             services.AddCors(o =>
             {
                 o.AddPolicy("Everything", p =>

@@ -2,11 +2,13 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Threading.Channels;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using Microsoft.Extensions.Logging;
 using MsgPack.Serialization;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.SignalR.Internal;
+using Microsoft.AspNetCore.SignalR.Service.Core;
 
 namespace Microsoft.AspNetCore.SignalR.Client
 {
@@ -88,6 +90,16 @@ namespace Microsoft.AspNetCore.SignalR.Client
             return hubConnectionBuilder;
         }
 
+        public static IHubConnectionBuilder WithMessageQueue(this IHubConnectionBuilder hubConnectionBuilder, Channel<HubConnectionMessageWrapper> requestHandlingQ)
+        {
+            if (requestHandlingQ == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandlingQ));
+            }
+            hubConnectionBuilder.AddSetting(HubConnectionBuilderDefaults.RequestQueueKey, requestHandlingQ);
+            return hubConnectionBuilder;
+        }
+
         public static ILoggerFactory GetLoggerFactory(this IHubConnectionBuilder hubConnectionBuilder)
         {
             hubConnectionBuilder.TryGetSetting<ILoggerFactory>(HubConnectionBuilderDefaults.LoggerFactoryKey, out var loggerFactory);
@@ -104,6 +116,12 @@ namespace Microsoft.AspNetCore.SignalR.Client
         {
             hubConnectionBuilder.TryGetSetting<IInvocationBinder>(HubConnectionBuilderDefaults.HubBinderKey, out var hubReceiver);
             return hubReceiver;
+        }
+
+        public static Channel<HubConnectionMessageWrapper> GetRequestHandlingQ(this IHubConnectionBuilder hubConnectionBuilder)
+        {
+            hubConnectionBuilder.TryGetSetting<Channel<HubConnectionMessageWrapper>>(HubConnectionBuilderDefaults.RequestQueueKey, out var requestHandlingQ);
+            return requestHandlingQ;
         }
     }
 }

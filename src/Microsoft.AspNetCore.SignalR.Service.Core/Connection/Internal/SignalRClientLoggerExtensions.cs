@@ -85,6 +85,9 @@ namespace Microsoft.AspNetCore.SignalR.Client.Internal
         private static readonly Action<ILogger, string, string, string, int, Exception> _preparingStreamingInvocation =
             LoggerMessage.Define<string, string, string, int>(LogLevel.Trace, new EventId(24, nameof(PreparingStreamingInvocation)), "Preparing streaming invocation '{invocationId}' of '{target}', with return type '{returnType}' and {argumentCount} argument(s).");
 
+        private static readonly Action<ILogger, Exception> _failWriteHubMessage =
+            LoggerMessage.Define(LogLevel.Error, new EventId(25, nameof(FailWriteHubMessage)), "Fail to  write HubMessage.");
+
         // Category: Streaming and NonStreaming
         private static readonly Action<ILogger, string, Exception> _invocationCreated =
             LoggerMessage.Define<string>(LogLevel.Trace, new EventId(0, nameof(InvocationCreated)), "Invocation {invocationId} created.");
@@ -111,6 +114,11 @@ namespace Microsoft.AspNetCore.SignalR.Client.Internal
 
         private static readonly Action<ILogger, string, Exception> _errorInvokingClientSideMethod =
            LoggerMessage.Define<string>(LogLevel.Error, new EventId(5, nameof(ErrorInvokingClientSideMethod)), "Invoking client side method '{methodName}' failed.");
+
+        public static void FailWriteHubMessage(this ILogger logger, Exception exception)
+        {
+            _failWriteHubMessage(logger, exception);
+        }
 
         public static void PreparingNonBlockingInvocation(this ILogger logger, string invocationId, string target, int count)
         {

@@ -8,5 +8,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
     public class ServiceHubOptions
     {
         public LogLevel ConsoleLogLevel { get; set; } = LogLevel.Information;
+
+        public int ServiceConnectionNo { get; set; } = 2;
     }
 }

@@ -13,9 +13,6 @@ namespace Microsoft.AspNetCore.SignalR.Core.Internal
         private static readonly Action<ILogger, string, Exception> _usingHubProtocol =
             LoggerMessage.Define<string>(LogLevel.Information, new EventId(0, nameof(UsingHubProtocol)), "Using HubProtocol '{protocol}'.");
 
-        private static readonly Action<ILogger, Exception> _serviceConnectionCanceled =
-            LoggerMessage.Define(LogLevel.Debug, new EventId(1, nameof(ServiceConnectionCanceled)), "Service connection was canceled.");
-
         private static readonly Action<ILogger, Exception> _negotiateCanceled =
             LoggerMessage.Define(LogLevel.Debug, new EventId(1, nameof(NegotiateCanceled)), "Negotiate was canceled.");
 
@@ -72,6 +69,17 @@ namespace Microsoft.AspNetCore.SignalR.Core.Internal
 
         private static readonly Action<ILogger, string, Exception> _invalidReturnValueFromStreamingMethod =
             LoggerMessage.Define<string>(LogLevel.Error, new EventId(19, nameof(InvalidReturnValueFromStreamingMethod)), "A streaming method returned a value that cannot be used to build enumerator {hubMethod}.");
+
+        private static readonly Action<ILogger, Exception> _serviceConnectionCanceled =
+            LoggerMessage.Define(LogLevel.Debug, new EventId(20, nameof(ServiceConnectionCanceled)), "Service connection was canceled.");
+
+        private static readonly Action<ILogger, Exception> _messageQueueError =
+            LoggerMessage.Define(LogLevel.Trace, new EventId(21, nameof(AbortFailed)), "Request message queue occurs error.");
+
+        public static void MessageQueueError(this ILogger logger, Exception exception)
+        {
+            _messageQueueError(logger, exception);
+        }
 
         public static void UsingHubProtocol(this ILogger logger, string hubProtocol)
         {

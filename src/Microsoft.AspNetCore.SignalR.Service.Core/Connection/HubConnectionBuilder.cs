@@ -48,7 +48,8 @@ namespace Microsoft.AspNetCore.SignalR.Client
             var loggerFactory = builder.GetLoggerFactory();
             var hubProtocol = builder.GetHubProtocol();
             var serviceHubBinder = builder.GetServiceHubBinder();
-            return new HubConnection(connection, hubProtocol ?? new JsonHubProtocol(), loggerFactory, serviceHubBinder);
+            var requestHandlingQ = builder.GetRequestHandlingQ();
+            return new HubConnection(connection, hubProtocol ?? new JsonHubProtocol(), loggerFactory, serviceHubBinder, requestHandlingQ);
         }
 
         [EditorBrowsable(EditorBrowsableState.Never)]

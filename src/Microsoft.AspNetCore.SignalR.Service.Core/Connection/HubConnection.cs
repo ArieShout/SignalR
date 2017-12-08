@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Sockets.Features;
 using Microsoft.AspNetCore.Sockets.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.AspNetCore.SignalR.Service.Core;
 
 namespace Microsoft.AspNetCore.SignalR.Client
 {
@@ -37,10 +38,12 @@ namespace Microsoft.AspNetCore.SignalR.Client
 
         private int _nextId = 0;
         private volatile bool _startCalled;
-
+        private Channel<HubMessage> _output;
+        private Channel<HubConnectionMessageWrapper> _requestHandlingQueue;
         public Task Closed { get; }
-
-        public HubConnection(IConnection connection, IHubProtocol protocol, ILoggerFactory loggerFactory, IInvocationBinder binder)
+        public Channel<HubMessage> Output => _output;
+        public HubConnection(IConnection connection, IHubProtocol protocol, ILoggerFactory loggerFactory,
+            IInvocationBinder binder, Channel<HubConnectionMessageWrapper> requestHandlingQ)
         {
             if (connection == null)
             {
@@ -58,6 +61,27 @@ namespace Microsoft.AspNetCore.SignalR.Client
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = _loggerFactory.CreateLogger<HubConnection>();
             _connection.OnReceived((data, state) => ((HubConnection)state).OnDataReceivedAsync(data), this);
+            _requestHandlingQueue = requestHandlingQ;
+            _output = Channel.CreateUnbounded<HubMessage>();
+            async Task WriteToTransport()
+            {
+                try
+                {
+                    while (await _output.Reader.WaitToReadAsync())
+                    {
+                        while (_output.Reader.TryRead(out var hubMessage))
+                        {
+                            await SendHubMessage(hubMessage);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.FailWriteHubMessage(ex);
+                }
+            }
+            var writingOutputTask = WriteToTransport();
+
             Closed = _connection.Closed.ContinueWith(task =>
             {
                 Shutdown(task.Exception);
@@ -72,23 +96,7 @@ namespace Microsoft.AspNetCore.SignalR.Client
             var payload = _protocolReaderWriter.WriteMessage(hubMessage);
             await _connection.SendAsync(payload, default);
         }
-        /*
-        public async Task SendHubInvocationMessage(HubInvocationMessage hubMessage)
-        {
-            try
-            {
-                var payload = _protocolReaderWriter.WriteMessage(hubMessage);
-                _logger.SendInvocation(hubMessage.InvocationId);
 
-                await _connection.SendAsync(payload, default);
-                _logger.SendInvocationCompleted(hubMessage.InvocationId);
-            }
-            catch (Exception ex)
-            {
-                _logger.SendInvocationFailed(hubMessage.InvocationId, ex);
-            }
-        }
-        */
         public async Task StartAsync()
         {
             try
@@ -100,6 +108,7 @@ namespace Microsoft.AspNetCore.SignalR.Client
                 _startCalled = true;
             }
         }
+
         private async Task StartAsyncCore()
         {
             var transferModeFeature = _connection.Features.Get<ITransferModeFeature>();
@@ -359,7 +368,14 @@ namespace Microsoft.AspNetCore.SignalR.Client
                         case InvocationMessage invocation:
                             _logger.ReceivedInvocation(invocation.InvocationId, invocation.Target,
                                 invocation.ArgumentBindingException != null ? null : invocation.Arguments);
-                            await DispatchInvocationAsync(invocation, _connectionActive.Token);
+                            HubConnectionMessageWrapper request = new HubConnectionMessageWrapper(this, invocation);
+                            while (await _requestHandlingQueue.Writer.WaitToWriteAsync())
+                            {
+                                if (_requestHandlingQueue.Writer.TryWrite(request))
+                                {
+                                    break;
+                                }
+                            }
                             break;
                         case CompletionMessage completion:
                             OnCompletionMessage(completion);

@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.Authorization;
@@ -26,10 +27,11 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
     {
         private static readonly string OnClientConnectedMethod = "OnConnectedAsync";
         private static readonly string OnDisconnectedAsyncMethod = "OnDisconnectedAsync";
+        private List<HubConnection> _hubConnections = new List<HubConnection>();
         private readonly HubLifetimeManager<THub> _lifetimeMgr;
-        private HubConnection _hubConnection;
         private readonly ILogger<ServiceHubEndPoint<THub>> _logger;
         private readonly IOptions<ServiceHubOptions> _hubOptions;
+        private readonly ConcurrentDictionary<string, List<InvocationHandler>> _handlers = new ConcurrentDictionary<string, List<InvocationHandler>>();
         // This HubConnectionList is duplicate with HubLifetimeManager
         private readonly HubConnectionList _connections = new HubConnectionList();
         private readonly IHubContext<THub> _hubContext;
@@ -53,43 +55,47 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         public void UseHub(string path)
         {
-            
-            _hubConnection = new HubConnectionBuilder()
-                                .WithHubBinder(this)
-                                .WithConsoleLogger(_hubOptions.Value.ConsoleLogLevel) // Debug purpose
-                                .WithUrl(path)
-                                .Build();
-            var output = Channel.CreateUnbounded<HubMessage>();
+            Channel<HubConnectionMessageWrapper> requestHandlingQ = Channel.CreateUnbounded<HubConnectionMessageWrapper>();
             async Task WriteToTransport()
             {
                 try
                 {
-                    while (await output.Reader.WaitToReadAsync())
+                    while (await requestHandlingQ.Reader.WaitToReadAsync())
                     {
-                        while (output.Reader.TryRead(out var hubMessage))
+                        while (requestHandlingQ.Reader.TryRead(out var HubConnectionMessageWrapper))
                         {
-                            await _hubConnection.SendHubMessage(hubMessage);
+                            await DispatchInvocationAsync(HubConnectionMessageWrapper);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    ex.ToString();
-                    //connectionContext.Abort(ex);
+                    _logger.MessageQueueError(ex);
                 }
             }
             var writingOutputTask = WriteToTransport();
-            _hubConnection.On<HubMethodInvocationMessage>(OnClientConnectedMethod, async (invocationMessage) =>
+            for (int i = 0; i < _hubOptions.Value.ServiceConnectionNo; i++)
             {
-                await HandleOnClientConnectedAsync(invocationMessage, output);
+                HubConnection hubConnection = new HubConnectionBuilder()
+                                .WithHubBinder(this)
+                                .WithConsoleLogger(_hubOptions.Value.ConsoleLogLevel) // Debug purpose
+                                .WithUrl(path)
+                                .WithMessageQueue(requestHandlingQ)
+                                .Build();
+                _hubConnections.Add(hubConnection);
+            }
+            
+            On<HubConnectionMessageWrapper>(OnClientConnectedMethod, async (invocationMessage) =>
+            {
+                await HandleOnClientConnectedAsync(invocationMessage);
             });
-            _hubConnection.On<HubMethodInvocationMessage>(OnDisconnectedAsyncMethod, async (invocationMessage) =>
+            On<HubConnectionMessageWrapper>(OnDisconnectedAsyncMethod, async (invocationMessage) =>
             {
                 await HandleOnDisconnectedAsync(invocationMessage);
             });
             foreach (var hubMethod in _methods.Keys)
             {
-                _hubConnection.On<HubMethodInvocationMessage>(hubMethod, async (invocationMessage) =>
+                On<HubConnectionMessageWrapper>(hubMethod, async (invocationMessage) =>
                 {
                     await HandleHubCallAsync(invocationMessage);
                 });
@@ -100,7 +106,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         {
             try
             {
-                await _hubConnection.StartAsync();
+                foreach (var hubConnection in _hubConnections)
+                {
+                    await hubConnection.StartAsync();
+                }
             }
             catch (Exception e)
             {
@@ -182,20 +191,23 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             }
         }
 
-        private async Task HandleOnClientConnectedAsync(HubMethodInvocationMessage hubMethodInvocationMessage, Channel<HubMessage> output)
+        private async Task HandleOnClientConnectedAsync(HubConnectionMessageWrapper messageWrapper)
         {
+            HubInvocationMessage hubMethodInvocationMessage = messageWrapper.HubMethodInvocationMessage;
+            Channel<HubMessage> output = messageWrapper.HubConnection.Output;
             var connectionId = hubMethodInvocationMessage.GetConnectionId();
             ServiceConnectionContext serviceConnCtx = new ServiceConnectionContext(connectionId);
 
-            ServiceHubConnectionContext serviceHubConnCtx = new ServiceHubConnectionContext(serviceConnCtx, output, _hubConnection);
+            ServiceHubConnectionContext serviceHubConnCtx = new ServiceHubConnectionContext(serviceConnCtx, output, messageWrapper.HubConnection);
             _connections.Add(serviceHubConnCtx);
             await _lifetimeMgr.OnConnectedAsync(serviceHubConnCtx);
             await HubOnConnectedAsync(serviceHubConnCtx);
             await SendMessageAsync(serviceHubConnCtx, CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, ""));
         }
 
-        private async Task HandleOnDisconnectedAsync(HubMethodInvocationMessage hubMethodInvocationMessage)
+        private async Task HandleOnDisconnectedAsync(HubConnectionMessageWrapper messageWrapper)
         {
+            HubInvocationMessage hubMethodInvocationMessage = messageWrapper.HubMethodInvocationMessage;
             var connectionId = hubMethodInvocationMessage.GetConnectionId();
             HubConnectionContext serviceHubConnCtx = _connections[connectionId];
             await HubOnDisconnectedAsync(serviceHubConnCtx);
@@ -203,8 +215,9 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             await SendMessageAsync(serviceHubConnCtx, CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, ""));
         }
 
-        private async Task HandleHubCallAsync(HubMethodInvocationMessage hubMethodInvocationMessage)
+        private async Task HandleHubCallAsync(HubConnectionMessageWrapper messageWrapper)
         {
+            HubMethodInvocationMessage hubMethodInvocationMessage = messageWrapper.HubMethodInvocationMessage;
             try
             {
                 var connectionId = hubMethodInvocationMessage.GetConnectionId();
@@ -226,7 +239,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             {
                 e.ToString();
                 // Abort the entire connection if the invocation fails in an unexpected way
-                await _hubConnection.DisposeAsync();
+                await messageWrapper.HubConnection.DisposeAsync();
                 //connection.Abort(ex);
             }
         }
@@ -423,6 +436,71 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             return null;
         }
 
+        private IDisposable On<T1>(string methodName, Action<T1> handler)
+        {
+            return On(methodName,
+                new[] { typeof(T1) },
+                args => handler((T1)args[0]));
+        }
+
+        private IDisposable On(string methodName, Type[] parameterTypes, Action<object[]> handler)
+        {
+            return On(methodName, parameterTypes, (parameters, state) =>
+            {
+                var currentHandler = (Action<object[]>)state;
+                currentHandler(parameters);
+                return Task.CompletedTask;
+            }, handler);
+        }
+
+        private IDisposable On(string methodName, Type[] parameterTypes, Func<object[], object, Task> handler, object state)
+        {
+            var invocationHandler = new InvocationHandler(parameterTypes, handler, state);
+            var invocationList = _handlers.AddOrUpdate(methodName, _ => new List<InvocationHandler> { invocationHandler },
+                (_, invocations) =>
+                {
+                    lock (invocations)
+                    {
+                        invocations.Add(invocationHandler);
+                    }
+                    return invocations;
+                });
+
+            return new Subscription(invocationHandler, invocationList);
+        }
+
+        private async Task DispatchInvocationAsync(HubConnectionMessageWrapper messageWrapper)
+        {
+            HubMethodInvocationMessage invocation = messageWrapper.HubMethodInvocationMessage;
+            // Find the handler
+            if (!_handlers.TryGetValue(invocation.Target, out var handlers))
+            {
+                _logger.MissingHandler(invocation.Target);
+                return;
+            }
+
+            //TODO: Optimize this!
+            // Copying the callbacks to avoid concurrency issues
+            InvocationHandler[] copiedHandlers;
+            lock (handlers)
+            {
+                copiedHandlers = new InvocationHandler[handlers.Count];
+                handlers.CopyTo(copiedHandlers);
+            }
+
+            foreach (var handler in copiedHandlers)
+            {
+                try
+                {
+                    await handler.InvokeAsync(new object[] { messageWrapper });
+                }
+                catch (Exception ex)
+                {
+                    _logger.ErrorInvokingClientSideMethod(invocation.Target, ex);
+                }
+            }
+        }
+
         Type IInvocationBinder.GetReturnType(string invocationId)
         {
             return typeof(object);
@@ -452,6 +530,45 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             public Type[] ParameterTypes { get; }
 
             public IList<IAuthorizeData> Policies { get; }
+        }
+
+        private class Subscription : IDisposable
+        {
+            private readonly InvocationHandler _handler;
+            private readonly List<InvocationHandler> _handlerList;
+
+            public Subscription(InvocationHandler handler, List<InvocationHandler> handlerList)
+            {
+                _handler = handler;
+                _handlerList = handlerList;
+            }
+
+            public void Dispose()
+            {
+                lock (_handlerList)
+                {
+                    _handlerList.Remove(_handler);
+                }
+            }
+        }
+
+        private struct InvocationHandler
+        {
+            public Type[] ParameterTypes { get; }
+            private readonly Func<object[], object, Task> _callback;
+            private readonly object _state;
+
+            public InvocationHandler(Type[] parameterTypes, Func<object[], object, Task> callback, object state)
+            {
+                _callback = callback;
+                ParameterTypes = parameterTypes;
+                _state = state;
+            }
+
+            public Task InvokeAsync(object[] parameters)
+            {
+                return _callback(parameters, _state);
+            }
         }
     }
 }
