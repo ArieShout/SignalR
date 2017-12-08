@@ -18,6 +18,8 @@ using Microsoft.AspNetCore.SignalR.Client.Internal;
 using Microsoft.AspNetCore.SignalR.Core.Internal;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using System.Security.Claims;
+using System.Text;
+using Microsoft.AspNetCore.SignalR.Internal.Encoders;
 
 namespace Microsoft.AspNetCore.SignalR.ServiceCore
 {
@@ -25,6 +27,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
     {
         private static readonly string OnClientConnectedMethod = "OnConnectedAsync";
         private static readonly string OnDisconnectedAsyncMethod = "OnDisconnectedAsync";
+
         private readonly ILogger<ServiceHubEndPoint<THub>> _logger;
         private readonly HubLifetimeManager<THub> _lifetimeMgr;
         private HubConnection _hubConnection;
@@ -33,6 +36,7 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
         private readonly IHubContext<THub> _hubContext;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly Dictionary<string, HubMethodDescriptor> _methods = new Dictionary<string, HubMethodDescriptor>(StringComparer.OrdinalIgnoreCase);
+
         public ServiceHubEndPoint(HubLifetimeManager<THub> lifetimeMgr,
             ILogger<ServiceHubEndPoint<THub>> logger,
             IServiceScopeFactory serviceScopeFactory,
@@ -47,10 +51,12 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
 
         public void UseHub(string path, LogLevel logLevel = LogLevel.Information)
         {
+            var encodedCredential = Convert.ToBase64String(Encoding.UTF8.GetBytes("Username:Password"));
             _hubConnection = new HubConnectionBuilder()
                                 .WithHubBinder(this)
                                 .WithConsoleLogger(logLevel) // Debug purpose
                                 .WithUrl(path)
+                                .WithHeader("Authorization", "Basic " + encodedCredential)
                                 .Build();
             var output = Channel.CreateUnbounded<HubMessage>();
             async Task WriteToTransport()
@@ -71,18 +77,22 @@ namespace Microsoft.AspNetCore.SignalR.ServiceCore
                     //connectionContext.Abort(ex);
                 }
             }
+
             var writingOutputTask = WriteToTransport();
-            _hubConnection.On<HubMethodInvocationMessage>(OnClientConnectedMethod, async (invocationMessage) =>
+
+            _hubConnection.On<HubMethodInvocationMessage>(OnClientConnectedMethod, async invocationMessage =>
             {
                 await HandleOnClientConnectedAsync(invocationMessage, output);
             });
-            _hubConnection.On<HubMethodInvocationMessage>(OnDisconnectedAsyncMethod, async (invocationMessage) =>
+
+            _hubConnection.On<HubMethodInvocationMessage>(OnDisconnectedAsyncMethod, async invocationMessage =>
             {
                 await HandleOnDisconnectedAsync(invocationMessage);
             });
+
             foreach (var hubMethod in _methods.Keys)
             {
-                _hubConnection.On<HubMethodInvocationMessage>(hubMethod, async (invocationMessage) =>
+                _hubConnection.On<HubMethodInvocationMessage>(hubMethod, async invocationMessage =>
                 {
                     await HandleHubCallAsync(invocationMessage);
                 });
