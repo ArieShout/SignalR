@@ -34,6 +34,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddAuthentication(BasicAuthenticationDefaults.AuthenticationScheme)
                 .AddBasic(options =>
                 {
+                    options.Realm = "Azure SignalR Service";
                     options.AllowInsecureProtocol = true;
                     options.Events = new BasicAuthenticationEvents
                     {
