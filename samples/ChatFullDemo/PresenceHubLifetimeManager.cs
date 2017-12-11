@@ -21,7 +21,7 @@ namespace ChatSample
         {
         }
     }
-    /*
+
     public class RedisPresenceHublifetimeManager<THub> : PresenceHubLifetimeManager<THub, RedisHubLifetimeManager<THub>>
     where THub : HubWithPresence
     {
@@ -31,7 +31,7 @@ namespace ChatSample
         {
         }
     }
-    */
+
     public class PresenceHubLifetimeManager<THub, THubLifetimeManager> : HubLifetimeManager<THub>, IDisposable
         where THubLifetimeManager : HubLifetimeManager<THub>
         where THub : HubWithPresence
