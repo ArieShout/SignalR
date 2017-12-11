@@ -103,6 +103,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ChatDemo", "samples\ChatDem
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HubsDemo", "samples\HubsDemo\HubsDemo.csproj", "{82F7DC2D-C781-49A0-B393-9DACCC57E848}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ChatFullDemo", "samples\ChatFullDemo\ChatFullDemo.csproj", "{CD9539A0-1FD9-4DF7-A05A-CFC1E4046C2A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -237,6 +239,10 @@ Global
 		{82F7DC2D-C781-49A0-B393-9DACCC57E848}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{82F7DC2D-C781-49A0-B393-9DACCC57E848}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{82F7DC2D-C781-49A0-B393-9DACCC57E848}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CD9539A0-1FD9-4DF7-A05A-CFC1E4046C2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CD9539A0-1FD9-4DF7-A05A-CFC1E4046C2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CD9539A0-1FD9-4DF7-A05A-CFC1E4046C2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CD9539A0-1FD9-4DF7-A05A-CFC1E4046C2A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -275,6 +281,7 @@ Global
 		{7B7A7D95-19D3-44E6-87BC-214538938ABF} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
 		{6AC39C6D-EA1A-4A67-86B5-5D5D15456B7F} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
 		{82F7DC2D-C781-49A0-B393-9DACCC57E848} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
+		{CD9539A0-1FD9-4DF7-A05A-CFC1E4046C2A} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7945A4E4-ACDB-4F6E-95CA-6AC6E7C2CD59}
