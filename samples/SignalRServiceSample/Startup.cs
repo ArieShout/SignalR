@@ -35,7 +35,11 @@ namespace SignalRServiceSample
             // To use Redis scaleout uncomment .AddRedis2
             services.AddSignalRServiceServer(options =>
                 {
-                    options.AudienceProvider = () => new[] {Configuration["Auth:JWT:Audience"]};
+                    options.AudienceProvider = () => new[]
+                    {
+                        $"{Configuration["Auth:JWT:Audience"]}/client/",
+                        $"{Configuration["Auth:JWT:Audience"]}/server/"
+                    };
                     options.SigningKeyProvider = () => new[] {Configuration["Auth:JWT:IssuerSigningKey"]};
                 })
                 //.AddRedis2()
