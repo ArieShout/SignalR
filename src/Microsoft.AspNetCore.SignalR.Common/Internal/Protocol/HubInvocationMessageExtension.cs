@@ -114,7 +114,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         public static bool TryGetClaims<TMessage>(this TMessage message, out IEnumerable<Claim> claims)
             where TMessage : HubInvocationMessage
         {
-            claims = message.TryGetMetadata(HubInvocationMessage.ActionKeyName, out var serializedClaims)
+            claims = message.TryGetMetadata(HubInvocationMessage.ClaimsKeyName, out var serializedClaims)
                 ? JsonConvert.DeserializeObject<IEnumerable<Claim>>(serializedClaims)
                 : null;
 
