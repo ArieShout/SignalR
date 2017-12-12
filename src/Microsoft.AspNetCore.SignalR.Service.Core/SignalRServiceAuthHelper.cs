@@ -7,7 +7,10 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Sockets;
+using Microsoft.AspNetCore.Sockets.Internal;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
@@ -43,13 +46,18 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             return JwtTokenHandler.WriteToken(token);
         }
 
-        public Task GetServiceEndpoint<THub>(HttpContext context, SignalRServiceConfiguration config)
-            where THub : Hub
+        public async Task GetServiceEndpoint<THub>(HttpContext context, IList<IAuthorizeData> authorizeData,
+            SignalRServiceConfiguration config) where THub : Hub
         {
+            if (!await AuthorizeHelper.AuthorizeAsync(context, authorizeData))
+            {
+                return;
+            }
+
             var serviceUrl = GetClientUrl<THub>(config);
             var jwtBearer = GetClientToken(context, config);
 
-            return context.Response.WriteAsync(
+            await context.Response.WriteAsync(
                 JsonConvert.SerializeObject(new
                 {
                     serviceUrl,
@@ -59,7 +67,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         public string GetClientUrl<THub>(SignalRServiceConfiguration config) where THub: Hub
         {
-            return $"http://{config.HostName}/client/{nameof(THub).ToLower()}";
+            return $"http://{config.HostName}/client/{typeof(THub).Name.ToLower()}";
         }
 
         public string GetClientToken(HttpContext context, SignalRServiceConfiguration config)
@@ -74,7 +82,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         public string GetServerUrl<THub>(SignalRServiceConfiguration config) where THub : Hub
         {
-            return $"http://{config.HostName}/server/{nameof(THub).ToLower()}";
+            return $"http://{config.HostName}/server/{typeof(THub).Name.ToLower()}";
         }
 
         public string GetServerToken(SignalRServiceConfiguration config)

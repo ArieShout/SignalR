@@ -1,6 +1,10 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,8 +25,11 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         public void MapHub<THub>(string path) where THub : Hub
         {
+            var authorizeAttributes = typeof(THub).GetCustomAttributes<AuthorizeAttribute>(inherit: true);
+            var authorizeData = authorizeAttributes as IList<IAuthorizeData> ?? authorizeAttributes.ToList<IAuthorizeData>();
             var authHelper = _routes.ServiceProvider.GetRequiredService<SignalRServiceAuthHelper>();
-            _routes.MapRoute(path, c => authHelper.GetServiceEndpoint<THub>(c, _config));
+
+            _routes.MapRoute(path, c => authHelper.GetServiceEndpoint<THub>(c, authorizeData, _config));
             _hubBuilder.BuildServiceHub<THub>(_config);
         }
     }
