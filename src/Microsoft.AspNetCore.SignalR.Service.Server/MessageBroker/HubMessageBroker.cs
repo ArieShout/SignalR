@@ -55,8 +55,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             GetOrAddServerHubManager(hubName);
 
             // Invoke OnConnectedAsync on server
-            await PassThruClientMessage(hubName, context,
-                new InvocationMessage(Guid.NewGuid().ToString(), true, OnConnectedMethodName, null, new object[0]));
+            var message = new InvocationMessage(Guid.NewGuid().ToString(), true, OnConnectedMethodName, null,
+                new object[0]);
+            message.AddClaims(context.User.Claims);
+            await PassThruClientMessage(hubName, context, message);
         }
 
         public async Task OnClientDisconnectedAsync(string hubName, HubConnectionContext context)

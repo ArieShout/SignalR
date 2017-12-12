@@ -2,11 +2,18 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Security.Claims;
+using Newtonsoft.Json;
 
 namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 {
     public static class HubInvocationMessageExtension
     {
+        private static readonly JsonSerializerSettings JsonSerializerSettings = new JsonSerializerSettings
+        {
+            ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+        };
+
         public static TMessage AddMetadata<TMessage>(this TMessage message, IDictionary<string, string> metadata)
             where TMessage : HubInvocationMessage
         {
@@ -79,14 +86,11 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         public static bool TryGetExcludedIds<TMessage>(this TMessage message, out IReadOnlyList<string> excludedIdList)
             where TMessage : HubInvocationMessage
         {
-            if (message.TryGetMetadata(HubInvocationMessage.ExcludedIdsKeyName, out var value))
-            {
-                excludedIdList = new List<string>(value.Split(','));
-                return true;
-            }
+            excludedIdList = message.TryGetMetadata(HubInvocationMessage.ExcludedIdsKeyName, out var value)
+                ? new List<string>(value.Split(','))
+                : null;
 
-            excludedIdList = null;
-            return false;
+            return excludedIdList != null;
         }
 
         public static TMessage AddAction<TMessage>(this TMessage message, string actionName)
@@ -99,6 +103,22 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             where TMessage : HubInvocationMessage
         {
             return message.TryGetMetadata(HubInvocationMessage.ActionKeyName, out actionName);
+        }
+
+        public static TMessage AddClaims<TMessage>(this TMessage message, IEnumerable<Claim> claims)
+            where TMessage : HubInvocationMessage
+        {
+            return message.AddMetadata(HubInvocationMessage.ClaimsKeyName, JsonConvert.SerializeObject(claims, JsonSerializerSettings));
+        }
+
+        public static bool TryGetClaims<TMessage>(this TMessage message, out IEnumerable<Claim> claims)
+            where TMessage : HubInvocationMessage
+        {
+            claims = message.TryGetMetadata(HubInvocationMessage.ActionKeyName, out var serializedClaims)
+                ? JsonConvert.DeserializeObject<IEnumerable<Claim>>(serializedClaims)
+                : null;
+
+            return claims != null;
         }
     }
 }

@@ -12,6 +12,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         internal const string ConnectionIdKeyName = "connId";
         internal const string GroupNameKeyName = "group";
         internal const string ExcludedIdsKeyName = "excluded";
+        internal const string ClaimsKeyName = "claims";
 
         public string InvocationId { get; }
 

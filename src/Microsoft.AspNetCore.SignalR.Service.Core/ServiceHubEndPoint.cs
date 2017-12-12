@@ -28,7 +28,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         private const string OnClientConnectedMethod = "OnConnectedAsync";
         private const string OnDisconnectedAsyncMethod = "OnDisconnectedAsync";
 
-        private List<HubConnection> _hubConnections = new List<HubConnection>();
+        private readonly List<HubConnection> _hubConnections = new List<HubConnection>();
         private readonly HubLifetimeManager<THub> _lifetimeMgr;
         private readonly ILogger<ServiceHubEndPoint<THub>> _logger;
         private readonly IOptions<ServiceHubOptions> _hubOptions;
@@ -76,9 +76,9 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                 {
                     while (await requestHandlingQ.Reader.WaitToReadAsync())
                     {
-                        while (requestHandlingQ.Reader.TryRead(out var HubConnectionMessageWrapper))
+                        while (requestHandlingQ.Reader.TryRead(out var messageWrapper))
                         {
-                            await DispatchInvocationAsync(HubConnectionMessageWrapper);
+                            await DispatchInvocationAsync(messageWrapper);
                         }
                     }
                 }
@@ -205,50 +205,53 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         private async Task HandleOnClientConnectedAsync(HubConnectionMessageWrapper messageWrapper)
         {
-            HubInvocationMessage hubMethodInvocationMessage = messageWrapper.HubMethodInvocationMessage;
-            Channel<HubMessage> output = messageWrapper.HubConnection.Output;
-            var connectionId = hubMethodInvocationMessage.GetConnectionId();
-            ServiceConnectionContext serviceConnCtx = new ServiceConnectionContext(connectionId);
+            var message = messageWrapper.HubMethodInvocationMessage;
+            var connectionId = message.GetConnectionId();
+            var connContext = new ServiceConnectionContext(connectionId);
+            if (message.TryGetClaims(out var claims))
+            {
+                connContext.User = new ClaimsPrincipal();
+                connContext.User.AddIdentity(new ClaimsIdentity(claims));
+            }
 
-            ServiceHubConnectionContext serviceHubConnCtx =
-                new ServiceHubConnectionContext(serviceConnCtx, output, messageWrapper.HubConnection);
-            _connections.Add(serviceHubConnCtx);
-            await _lifetimeMgr.OnConnectedAsync(serviceHubConnCtx);
-            await HubOnConnectedAsync(serviceHubConnCtx);
-            await SendMessageAsync(serviceHubConnCtx,
-                CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, ""));
+            var hubConnContext = new ServiceHubConnectionContext(connContext, messageWrapper.HubConnection.Output,
+                messageWrapper.HubConnection);
+
+            _connections.Add(hubConnContext);
+            await _lifetimeMgr.OnConnectedAsync(hubConnContext);
+            await HubOnConnectedAsync(hubConnContext);
+            await SendMessageAsync(hubConnContext, CompletionMessage.WithResult(message.InvocationId, ""));
         }
 
         private async Task HandleOnDisconnectedAsync(HubConnectionMessageWrapper messageWrapper)
         {
-            HubInvocationMessage hubMethodInvocationMessage = messageWrapper.HubMethodInvocationMessage;
-            var connectionId = hubMethodInvocationMessage.GetConnectionId();
-            HubConnectionContext serviceHubConnCtx = _connections[connectionId];
-            await HubOnDisconnectedAsync(serviceHubConnCtx);
-            await _lifetimeMgr.OnDisconnectedAsync(serviceHubConnCtx);
-            await SendMessageAsync(serviceHubConnCtx,
-                CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, ""));
+            var message = messageWrapper.HubMethodInvocationMessage;
+            var connectionId = message.GetConnectionId();
+            var hubConnContext = _connections[connectionId];
+            await HubOnDisconnectedAsync(hubConnContext);
+            await _lifetimeMgr.OnDisconnectedAsync(hubConnContext);
+            await SendMessageAsync(hubConnContext, CompletionMessage.WithResult(message.InvocationId, ""));
         }
 
         private async Task HandleHubCallAsync(HubConnectionMessageWrapper messageWrapper)
         {
-            HubMethodInvocationMessage hubMethodInvocationMessage = messageWrapper.HubMethodInvocationMessage;
+            var message = messageWrapper.HubMethodInvocationMessage;
             try
             {
-                var connectionId = hubMethodInvocationMessage.GetConnectionId();
-                HubConnectionContext serviceHubConnCtx = _connections[connectionId];
-                if (!_methods.TryGetValue(hubMethodInvocationMessage.Target, out var descriptor))
+                var connectionId = message.GetConnectionId();
+                var hubConnContext = _connections[connectionId];
+                if (_methods.TryGetValue(message.Target, out var descriptor))
                 {
-                    // Send an error to the client. Then let the normal completion process occur
-                    _logger.UnknownHubMethod(hubMethodInvocationMessage.Target);
-                    await SendMessageAsync(serviceHubConnCtx, CompletionMessage.WithError(
-                        hubMethodInvocationMessage.InvocationId,
-                        $"Unknown hub method '{hubMethodInvocationMessage.Target}'"));
+                    // TODO. support StreamItem 
+                    await Invoke(descriptor, hubConnContext, message, false);
                 }
                 else
                 {
-                    // TODO. support StreamItem 
-                    await Invoke(descriptor, serviceHubConnCtx, hubMethodInvocationMessage, false);
+                    // Send an error to the client. Then let the normal completion process occur
+                    _logger.UnknownHubMethod(message.Target);
+                    await SendMessageAsync(hubConnContext, CompletionMessage.WithError(
+                        message.InvocationId,
+                        $"Unknown hub method '{message.Target}'"));
                 }
             }
             catch (Exception e)
@@ -385,16 +388,22 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         }
 
         private async Task Invoke(HubMethodDescriptor descriptor, HubConnectionContext connection,
-            HubMethodInvocationMessage hubMethodInvocationMessage, bool isStreamedInvocation)
+            HubMethodInvocationMessage message, bool isStreamedInvocation)
         {
             var methodExecutor = descriptor.MethodExecutor;
 
             using (var scope = _serviceScopeFactory.CreateScope())
             {
-                /* TODO: Authorization support
-                */
+                if (!await IsHubMethodAuthorized(scope.ServiceProvider, connection.User, descriptor.Policies))
+                {
+                    _logger.HubMethodNotAuthorized(message.Target);
+                    await SendInvocationError(message, connection,
+                        $"Failed to invoke '{message.Target}' because user is unauthorized");
+                    return;
+                }
+
                 if (!await ValidateInvocationMode(methodExecutor.MethodReturnType, isStreamedInvocation,
-                    hubMethodInvocationMessage, connection))
+                    message, connection))
                 {
                     return;
                 }
@@ -406,29 +415,29 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                 {
                     InitializeHub(hub, connection);
 
-                    var result = await ExecuteHubMethod(methodExecutor, hub, hubMethodInvocationMessage.Arguments);
+                    var result = await ExecuteHubMethod(methodExecutor, hub, message.Arguments);
 
                     if (isStreamedInvocation)
                     {
                         // TODO. Streamed Invocation support
                     }
-                    else if (!hubMethodInvocationMessage.NonBlocking)
+                    else if (!message.NonBlocking)
                     {
-                        _logger.SendingResult(hubMethodInvocationMessage.InvocationId,
+                        _logger.SendingResult(message.InvocationId,
                             methodExecutor.MethodReturnType.FullName);
                         await SendMessageAsync(connection,
-                            CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, result));
+                            CompletionMessage.WithResult(message.InvocationId, result));
                     }
                 }
                 catch (TargetInvocationException ex)
                 {
-                    _logger.FailedInvokingHubMethod(hubMethodInvocationMessage.Target, ex);
-                    await SendInvocationError(hubMethodInvocationMessage, connection, ex.InnerException.Message);
+                    _logger.FailedInvokingHubMethod(message.Target, ex);
+                    await SendInvocationError(message, connection, ex.InnerException.Message);
                 }
                 catch (Exception ex)
                 {
-                    _logger.FailedInvokingHubMethod(hubMethodInvocationMessage.Target, ex);
-                    await SendInvocationError(hubMethodInvocationMessage, connection, ex.Message);
+                    _logger.FailedInvokingHubMethod(message.Target, ex);
+                    await SendInvocationError(message, connection, ex.Message);
                 }
                 finally
                 {

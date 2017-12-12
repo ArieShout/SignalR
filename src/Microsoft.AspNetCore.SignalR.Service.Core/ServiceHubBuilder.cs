@@ -17,7 +17,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         public async void BuildServiceHub<THub>(SignalRServiceConfiguration config) where THub : Hub
         {
-            var endPoint = ApplicationServices.GetRequiredService<ServiceHubEndPoint<THub>>();
+            var endPoint = ApplicationServices.GetRequiredService<ServiceHubEndpoint<THub>>();
             endPoint.UseHub(config);
             await endPoint.StartAsync();
         }
