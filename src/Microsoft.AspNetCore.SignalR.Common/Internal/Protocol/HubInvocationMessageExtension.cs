@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using Newtonsoft.Json;
 
@@ -9,11 +10,6 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 {
     public static class HubInvocationMessageExtension
     {
-        private static readonly JsonSerializerSettings JsonSerializerSettings = new JsonSerializerSettings
-        {
-            ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-        };
-
         public static TMessage AddMetadata<TMessage>(this TMessage message, IDictionary<string, string> metadata)
             where TMessage : HubInvocationMessage
         {
@@ -108,17 +104,41 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         public static TMessage AddClaims<TMessage>(this TMessage message, IEnumerable<Claim> claims)
             where TMessage : HubInvocationMessage
         {
-            return message.AddMetadata(HubInvocationMessage.ClaimsKeyName, JsonConvert.SerializeObject(claims, JsonSerializerSettings));
+            return message.AddMetadata(HubInvocationMessage.ClaimsKeyName,
+                JsonConvert.SerializeObject(claims.Select(ClaimEntry.FromClaim)));
         }
 
         public static bool TryGetClaims<TMessage>(this TMessage message, out IEnumerable<Claim> claims)
             where TMessage : HubInvocationMessage
         {
             claims = message.TryGetMetadata(HubInvocationMessage.ClaimsKeyName, out var serializedClaims)
-                ? JsonConvert.DeserializeObject<IEnumerable<Claim>>(serializedClaims)
+                ? JsonConvert.DeserializeObject<IEnumerable<ClaimEntry>>(serializedClaims).Select(x => x.ToClaim())
                 : null;
 
             return claims != null;
+        }
+
+        internal class ClaimEntry
+        {
+            [JsonProperty("t")]
+            public string Type { get; set; }
+
+            [JsonProperty("v")]
+            public string Value { get; set; }
+
+            public static ClaimEntry FromClaim(Claim claim)
+            {
+                return new ClaimEntry
+                {
+                    Type = claim.Type,
+                    Value = claim.Value
+                };
+            }
+
+            public Claim ToClaim()
+            {
+                return new Claim(Type, Value);
+            }
         }
     }
 }

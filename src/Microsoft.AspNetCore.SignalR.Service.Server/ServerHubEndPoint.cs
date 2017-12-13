@@ -15,6 +15,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
     public class ServerHubEndPoint<THub> : BaseHubEndPoint<THub> where THub : Hub
     {
         private readonly IHubMessageBroker _hubMessageBroker;
+        private readonly IHubStatusManager _hubStatusManager;
 
         public ServerHubEndPoint(HubLifetimeManager<THub> lifetimeManager,
                            IHubProtocolResolver protocolResolver,
@@ -23,29 +24,35 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                            ILogger<ServerHubEndPoint<THub>> logger,
                            IServiceScopeFactory serviceScopeFactory,
                            IUserIdProvider userIdProvider,
-                           IHubMessageBroker hubMessageBroker) : base(lifetimeManager, protocolResolver, hubContext, hubOptions, logger, serviceScopeFactory, userIdProvider)
+                           IHubMessageBroker hubMessageBroker,
+                           IHubStatusManager hubStatusManager) : base(lifetimeManager, protocolResolver, hubContext, hubOptions, logger, serviceScopeFactory, userIdProvider)
         {
             _hubMessageBroker = hubMessageBroker;
+            _hubStatusManager = hubStatusManager;
         }
 
         protected override async Task OnHubConnectedAsync(string hubName, HubConnectionContext connection)
         {
             await _hubMessageBroker.OnServerConnectedAsync(hubName, connection);
+            _ = _hubStatusManager.AddServerConnection(hubName);
         }
 
         protected override async Task OnHubDisconnectedAsync(string hubName, HubConnectionContext connection, Exception exception)
         {
             await _hubMessageBroker.OnServerDisconnectedAsync(hubName, connection);
+            _ = _hubStatusManager.RemoveServerConnection(hubName);
         }
 
         protected override async Task OnHubInvocationAsync(string hubName, HubConnectionContext connection, HubMethodInvocationMessage message)
         {
             await _hubMessageBroker.PassThruServerMessage(hubName, connection, message);
+            _ = _hubStatusManager.AddServerMessage(hubName);
         }
 
         protected override async Task OnHubCompletionAsync(string hubName, HubConnectionContext connection, CompletionMessage message)
         {
             await _hubMessageBroker.PassThruServerMessage(hubName, connection, message);
+            _ = _hubStatusManager.AddServerMessage(hubName);
         }
     }
 }

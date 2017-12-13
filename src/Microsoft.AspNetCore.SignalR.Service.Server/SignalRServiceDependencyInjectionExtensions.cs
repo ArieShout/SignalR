@@ -55,6 +55,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton(typeof(IHubLifetimeManagerFactory), typeof(DefaultHubLifetimeManagerFactory));
             services.AddSingleton(typeof(IHubMessageBroker), typeof(HubMessageBroker));
             services.AddSingleton(typeof(IHubConnectionRouter), typeof(HubConnectionRouter));
+            services.AddSingleton(typeof(IHubStatusManager), typeof(DefaultHubStatusManager));
 
             services.AddAuthorization();
 
