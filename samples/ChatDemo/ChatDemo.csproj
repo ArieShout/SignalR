@@ -7,7 +7,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Microsoft.AspNetCore.SignalR.Service.Core\Microsoft.AspNetCore.SignalR.Service.Core.csproj" />
     <ProjectReference Include="..\..\client-ts\Microsoft.AspNetCore.SignalR.Client.TS\Microsoft.AspNetCore.SignalR.Client.TS.csproj" />
-    <PackageReference Include="Microsoft.AspNetCore.All" Version="$(MicrosoftAspNetCoreAllVersion)" />
   </ItemGroup>
  <ItemGroup>
     <PackageReference Include="BuildBundlerMinifier" Version="$(BuildBundlerMinifierPackageVersion)" />

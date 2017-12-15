@@ -92,10 +92,9 @@ namespace ChatSample
             app.UseStaticFiles();
 
             app.UseAuthentication();
-            app.UseSignalRService(configHub =>
+            app.UseSignalRService(Configuration["SignalRServerService:RootPath"], routes =>
             {
-                var signalrServicePath = Configuration["SignalRServerService:RootPath"];
-                configHub.BuildServiceHub<Chat>(signalrServicePath + "/server/chat");
+                routes.MapHub<Chat>("chat");
             });
 
             app.UseMvc(routes =>

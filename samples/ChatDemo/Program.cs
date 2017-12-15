@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace MyChat
@@ -8,11 +7,7 @@ namespace MyChat
     {
         public static void Main(string[] args)
         {
-            BuildWebHost(args).Run();
-        }
-
-        public static IWebHost BuildWebHost(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
+            var host = new WebHostBuilder()
                 .ConfigureLogging((context, factory) =>
                 {
                     factory.AddConfiguration(context.Configuration.GetSection("Logging"));
@@ -22,5 +17,8 @@ namespace MyChat
                 .UseUrls("http://*:5050")
                 .UseStartup<Startup>()
                 .Build();
+
+            host.Run();
+        }
     }
 }
