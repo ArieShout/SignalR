@@ -9,7 +9,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Sockets;
 using Microsoft.AspNetCore.Sockets.Internal;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -25,25 +24,6 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         public SignalRServiceAuthHelper(IOptions<ServiceHubOptions> serviceHubOptions)
         {
             _serviceHubOptions = serviceHubOptions.Value;
-        }
-
-        private static string GenerateJwtBearer(string issuer = null, string audience = null,
-            IEnumerable<Claim> claims = null, DateTime? expires = null, string signingKey = null)
-        {
-            SigningCredentials credentials = null;
-            if (!string.IsNullOrEmpty(signingKey))
-            {
-                var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
-                credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-            }
-
-            var token = new JwtSecurityToken(
-                issuer: issuer,
-                audience: audience,
-                claims: claims,
-                expires: expires,
-                signingCredentials: credentials);
-            return JwtTokenHandler.WriteToken(token);
         }
 
         public async Task GetServiceEndpoint<THub>(HttpContext context, IList<IAuthorizeData> authorizeData,
@@ -92,6 +72,25 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                 expires: DateTime.UtcNow.AddSeconds(30),
                 signingKey: config.Key
             );
+        }
+
+        private static string GenerateJwtBearer(string issuer = null, string audience = null,
+            IEnumerable<Claim> claims = null, DateTime? expires = null, string signingKey = null)
+        {
+            SigningCredentials credentials = null;
+            if (!string.IsNullOrEmpty(signingKey))
+            {
+                var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
+                credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+            }
+
+            var token = new JwtSecurityToken(
+                issuer: issuer,
+                audience: audience,
+                claims: claims,
+                expires: expires,
+                signingCredentials: credentials);
+            return JwtTokenHandler.WriteToken(token);
         }
     }
 }

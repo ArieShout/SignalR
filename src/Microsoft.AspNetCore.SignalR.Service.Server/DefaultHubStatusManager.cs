@@ -56,10 +56,28 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         public Task GetHubStatus(HttpContext context)
         {
+            var clientStats = _clientConnections.Select(x => BuildHubStatus(x, _clientMessages)).ToArray();
+            var serverStats = _serverConnections.Select(x => BuildHubStatus(x, _serverMessages)).ToArray();
+            var clientOverall = new HubStatus
+            {
+                ConnectionCount = clientStats.Sum(x => x.ConnectionCount),
+                MessageCount = clientStats.Sum(x => x.MessageCount)
+            };
+            var serverOverall = new HubStatus
+            {
+                ConnectionCount = serverStats.Sum(x => x.ConnectionCount),
+                MessageCount = serverStats.Sum(x => x.MessageCount)
+            };
+
             return context.Response.WriteAsync(JsonConvert.SerializeObject(new
             {
-                client = _clientConnections.Select(x => BuildHubStatus(x, _clientMessages)),
-                server = _serverConnections.Select(x => BuildHubStatus(x, _serverMessages))
+                overall = new
+                {
+                    client = clientOverall,
+                    server = serverOverall
+                },
+                client = clientStats,
+                server = serverStats
             }));
         }
 
@@ -77,6 +95,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
     internal class HubStatus
     {
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string HubName { get; set; }
 
         public int ConnectionCount { get; set; }
