@@ -33,7 +33,7 @@ namespace SignalRServiceSample
         public void ConfigureServices(IServiceCollection services)
         {
             // To use Redis scaleout uncomment .AddRedis2
-            services.AddSignalRServiceServer(options =>
+            var server = services.AddSignalRServiceServer(options =>
                 {
                     options.AudienceProvider = () => new[]
                     {
@@ -41,9 +41,21 @@ namespace SignalRServiceSample
                         $"{Configuration["Auth:JWT:Audience"]}/server/"
                     };
                     options.SigningKeyProvider = () => new[] {Configuration["Auth:JWT:IssuerSigningKey"]};
-                })
-                //.AddRedis2()
-                ;
+                });
+
+            var redisConnStr = $"{Configuration["Redis:ConnectionString"]}";
+            if (!string.IsNullOrEmpty(redisConnStr))
+            {
+                System.Console.WriteLine("Redis: on");
+                server.AddRedis2(options =>
+                {
+                    options.Options = StackExchange.Redis.ConfigurationOptions.Parse(redisConnStr);
+                });
+            }
+            else
+            {
+                System.Console.WriteLine("Redis: off");
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
