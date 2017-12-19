@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
+using static System.Console;
 
 namespace SignalRServiceSample
 {
@@ -41,20 +43,21 @@ namespace SignalRServiceSample
                         $"{Configuration["Auth:JWT:Audience"]}/server/"
                     };
                     options.SigningKeyProvider = () => new[] {Configuration["Auth:JWT:IssuerSigningKey"]};
+                    options.EnableStickySession = bool.TryParse(Configuration["EnableStickySession"], out var value) && value;
                 });
 
             var redisConnStr = $"{Configuration["Redis:ConnectionString"]}";
             if (!string.IsNullOrEmpty(redisConnStr))
             {
-                System.Console.WriteLine("Redis: on");
+                WriteLine("Redis: on");
                 server.AddRedis2(options =>
                 {
-                    options.Options = StackExchange.Redis.ConfigurationOptions.Parse(redisConnStr);
+                    options.Options = ConfigurationOptions.Parse(redisConnStr);
                 });
             }
             else
             {
-                System.Console.WriteLine("Redis: off");
+                WriteLine("Redis: off");
             }
         }
 

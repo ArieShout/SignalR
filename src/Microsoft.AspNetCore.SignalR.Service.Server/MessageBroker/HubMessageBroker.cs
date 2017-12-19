@@ -48,7 +48,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
             // Assign client connection to a server connection
             // Don't wait for its completion
-            _ = _router.OnClientConnected(hubName, context);
+            await _router.OnClientConnected(hubName, context);
 
             // When scaling out with Redis, it is possible that no server connection is connected to current instance.
             // So we need to create a ServerHubLifetimeManager to send the message to Redis.
@@ -77,12 +77,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                 new InvocationMessage(Guid.NewGuid().ToString(), true, OnDisconnectedMethodName, null, new object[0]));
         }
 
-        public async Task PassThruClientMessage(string hubName, HubConnectionContext context,
+        public async Task PassThruClientMessage(string hubName, HubConnectionContext connection,
             HubMethodInvocationMessage message)
         {
-            var targetConnId = context.GetTargetConnectionId();
-
-            if (!IsServerConnectionAlive(targetConnId))
+            if (!connection.TryGetRouteTarget(out var target) || !IsServerConnectionAlive(target.ConnectionId))
             {
                 throw new Exception("No assigned server.");
             }
@@ -90,8 +88,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             if (_serverHubManagerDict.TryGetValue(hubName, out var serverHubManager))
             {
                 // Add original connection Id to message metadata
-                message.AddConnectionId(context.ConnectionId);
-                await ((DefaultHubLifetimeManager<ServerHub>) serverHubManager).SendMessageAsync(targetConnId, message);
+                message.AddConnectionId(connection.ConnectionId);
+                await ((DefaultHubLifetimeManager<ServerHub>) serverHubManager).SendMessageAsync(target.ConnectionId, message);
             }
         }
 

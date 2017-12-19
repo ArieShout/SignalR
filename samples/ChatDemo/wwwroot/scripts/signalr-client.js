@@ -746,25 +746,45 @@ exports.NullLogger = Loggers_2.NullLogger;
 class ServiceConnection {
     constructor(url, options = {}) {
         this.url = "";
+        this.httpClient = new HttpClient_1.HttpClient();
         this.options = options || {};
         this.url = url;
         this.logger = Loggers_1.LoggerFactory.createLogger(options.logging);
-        // TODO: enable custom authorization
-        const httpClient = new HttpClient_1.HttpClient();
-        this.connectionPromise = httpClient.get(url)
+        let headers;
+        if (this.options.authHeader) {
+            headers = new Map();
+            headers.set("Authorization", this.options.authHeader());
+        }
+        this.connectionPromise = this.httpClient.get(url, headers)
             .then(response => {
             this.logger.log(ILogger_1.LogLevel.Information, "Successfully get service endpoint information.");
             const endpoint = JSON.parse(response);
-            if (!this.options.jwtBearer) {
-                this.options.jwtBearer = () => endpoint.jwtBearer;
-            }
-            this.connection = new HubConnection_1.HubConnection(endpoint.serviceUrl, this.options);
+            this.connection = this.createHubConnection(endpoint);
         })
             .catch(error => {
             this.logger.log(ILogger_1.LogLevel.Error, "Failed to get service endpoint information.");
             Promise.reject(error);
         });
     }
+    createHubConnection(endpoint) {
+        if (!this.options.jwtBearer) {
+            this.options.jwtBearer = () => endpoint.jwtBearer;
+        }
+        if (!this.options.httpClient) {
+            this.options.httpClient = this.httpClient;
+        }
+        let serviceUrl = endpoint.serviceUrl;
+        if (this.options.uid) {
+            if (serviceUrl.indexOf("?") > -1) {
+                serviceUrl = serviceUrl + "&uid=" + this.options.uid;
+            }
+            else {
+                serviceUrl = serviceUrl + "?uid=" + this.options.uid;
+            }
+        }
+        return new HubConnection_1.HubConnection(serviceUrl, this.options);
+    }
+    // TODO: allow restartable connection
     start() {
         return __awaiter(this, void 0, void 0, function* () {
             // TODO: find a better way to assure connection existence

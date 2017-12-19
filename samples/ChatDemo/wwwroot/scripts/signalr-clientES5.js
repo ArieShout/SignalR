@@ -1219,6 +1219,10 @@ var _regenerator = require("babel-runtime/regenerator");
 
 var _regenerator2 = _interopRequireDefault(_regenerator);
 
+var _map = require("babel-runtime/core-js/map");
+
+var _map2 = _interopRequireDefault(_map);
+
 var _classCallCheck2 = require("babel-runtime/helpers/classCallCheck");
 
 var _classCallCheck3 = _interopRequireDefault(_classCallCheck2);
@@ -1284,20 +1288,19 @@ var ServiceConnection = function () {
         (0, _classCallCheck3.default)(this, ServiceConnection);
 
         this.url = "";
+        this.httpClient = new HttpClient_1.HttpClient();
         this.options = options || {};
         this.url = url;
         this.logger = Loggers_1.LoggerFactory.createLogger(options.logging);
-        // TODO: enable custom authorization
-        var httpClient = new HttpClient_1.HttpClient();
-        this.connectionPromise = httpClient.get(url).then(function (response) {
+        var headers = void 0;
+        if (this.options.authHeader) {
+            headers = new _map2.default();
+            headers.set("Authorization", this.options.authHeader());
+        }
+        this.connectionPromise = this.httpClient.get(url, headers).then(function (response) {
             _this.logger.log(ILogger_1.LogLevel.Information, "Successfully get service endpoint information.");
             var endpoint = JSON.parse(response);
-            if (!_this.options.jwtBearer) {
-                _this.options.jwtBearer = function () {
-                    return endpoint.jwtBearer;
-                };
-            }
-            _this.connection = new HubConnection_1.HubConnection(endpoint.serviceUrl, _this.options);
+            _this.connection = _this.createHubConnection(endpoint);
         }).catch(function (error) {
             _this.logger.log(ILogger_1.LogLevel.Error, "Failed to get service endpoint information.");
             _promise2.default.reject(error);
@@ -1305,6 +1308,29 @@ var ServiceConnection = function () {
     }
 
     (0, _createClass3.default)(ServiceConnection, [{
+        key: "createHubConnection",
+        value: function createHubConnection(endpoint) {
+            if (!this.options.jwtBearer) {
+                this.options.jwtBearer = function () {
+                    return endpoint.jwtBearer;
+                };
+            }
+            if (!this.options.httpClient) {
+                this.options.httpClient = this.httpClient;
+            }
+            var serviceUrl = endpoint.serviceUrl;
+            if (this.options.uid) {
+                if (serviceUrl.indexOf("?") > -1) {
+                    serviceUrl = serviceUrl + "&uid=" + this.options.uid;
+                } else {
+                    serviceUrl = serviceUrl + "?uid=" + this.options.uid;
+                }
+            }
+            return new HubConnection_1.HubConnection(serviceUrl, this.options);
+        }
+        // TODO: allow restartable connection
+
+    }, {
         key: "start",
         value: function start() {
             return __awaiter(this, void 0, void 0, /*#__PURE__*/_regenerator2.default.mark(function _callee() {
@@ -1504,7 +1530,7 @@ var ServiceConnection = function () {
 
 exports.ServiceConnection = ServiceConnection;
 
-},{"./HttpClient":3,"./HttpConnection":4,"./HubConnection":6,"./ILogger":7,"./JsonHubProtocol":8,"./Loggers":9,"./Transports":12,"babel-runtime/core-js/promise":20,"babel-runtime/helpers/classCallCheck":23,"babel-runtime/helpers/createClass":24,"babel-runtime/regenerator":28}],12:[function(require,module,exports){
+},{"./HttpClient":3,"./HttpConnection":4,"./HubConnection":6,"./ILogger":7,"./JsonHubProtocol":8,"./Loggers":9,"./Transports":12,"babel-runtime/core-js/map":15,"babel-runtime/core-js/promise":20,"babel-runtime/helpers/classCallCheck":23,"babel-runtime/helpers/createClass":24,"babel-runtime/regenerator":28}],12:[function(require,module,exports){
 "use strict";
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.

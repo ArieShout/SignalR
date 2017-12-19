@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,6 +17,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
         public Func<IEnumerable<string>> AudienceProvider { get; set; } = null;
 
         public Func<IEnumerable<string>> SigningKeyProvider { get; set; } = null;
+
+        public bool EnableStickySession { get; set; } = false;
     }
 
     internal class ConfigureSignalRServiceOptions : IConfigureNamedOptions<JwtBearerOptions>

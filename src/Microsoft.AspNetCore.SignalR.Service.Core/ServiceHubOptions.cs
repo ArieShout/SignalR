@@ -13,7 +13,9 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
     {
         public LogLevel ConsoleLogLevel { get; set; } = LogLevel.Information;
 
-        public int ServiceConnectionNo { get; set; } = 2;
+        public int ConnectionNumber { get; set; } = 2;
+
+        public string ServerId { get; set; } = Guid.NewGuid().ToString();
 
         // TODO: selectively pass claims to SignalR service
         public Func<HttpContext, IEnumerable<Claim>> ClaimProvider { get; set; } =

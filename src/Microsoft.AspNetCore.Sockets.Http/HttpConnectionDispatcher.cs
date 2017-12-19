@@ -515,12 +515,6 @@ namespace Microsoft.AspNetCore.Sockets
                 return null;
             }
 
-            var hubName = context.GetRouteValue("hubName");
-            if (hubName != null)
-            {
-                connection.Metadata.Add("HubName", hubName.ToString());
-            }
-
             return connection;
         }
     }
