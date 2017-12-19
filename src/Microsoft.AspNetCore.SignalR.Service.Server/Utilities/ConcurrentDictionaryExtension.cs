@@ -7,17 +7,20 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
     {
         // TODO: It is possible that below update will fail because of high volume of concurrent connections.
         //       Need a more robust way to update connection count.
-        public static bool TryUpdate(this ConcurrentDictionary<string, int> dict, string key,
+        public static bool TryUpdate<T>(this ConcurrentDictionary<T, int> dict, T key,
             Func<int, int> updateFactory)
         {
-            return dict.TryGetValue(key, out var currentValue) && dict.TryUpdate(key, updateFactory(currentValue), currentValue);
-        }
-
-        // TODO: It is possible that below update will fail because of high volume of concurrent connections.
-        //       Need a more robust way to update connection count.
-        public static bool TryUpdate(this ConcurrentDictionary<string, int> dict, string key, int newValue)
-        {
-            return dict.TryGetValue(key, out var currentValue) && dict.TryUpdate(key, newValue, currentValue);
+            var retry = 3;
+            while (retry > 0)
+            {
+                if (!dict.TryGetValue(key, out var currentValue)) break;
+                if (dict.TryUpdate(key, updateFactory(currentValue), currentValue))
+                {
+                    return true;
+                }
+                retry--;
+            }
+            return false;
         }
     }
 }

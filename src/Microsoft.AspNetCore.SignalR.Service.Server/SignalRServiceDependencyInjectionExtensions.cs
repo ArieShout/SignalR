@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.SignalR.Core;
 using Microsoft.AspNetCore.SignalR.Internal;
 using Microsoft.AspNetCore.SignalR.Service.Server;
 using Microsoft.AspNetCore.Sockets;
+using Microsoft.Extensions.Caching.Redis;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
@@ -25,9 +26,10 @@ namespace Microsoft.Extensions.DependencyInjection
             services.Configure(configure);
 
             services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureSignalRServiceOptions>();
-
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer();
+
+            services.AddDistributedMemoryCache();
 
             services.AddSockets2();
             return services.AddSignalRCore2();
@@ -56,22 +58,28 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton(typeof(IHubMessageBroker), typeof(HubMessageBroker));
             services.AddSingleton(typeof(IHubConnectionRouter), typeof(HubConnectionRouter));
             services.AddSingleton(typeof(IHubStatusManager), typeof(DefaultHubStatusManager));
+            services.AddSingleton(typeof(IRoutingCache), typeof(DefaultRoutingCache));
 
             services.AddAuthorization();
 
             return new SignalRBuilder(services);
         }
 
-        public static ISignalRBuilder AddRedis2(this ISignalRBuilder builder)
+        public static ISignalRBuilder AddRedis2(this ISignalRBuilder builder,
+            Action<RedisOptions2> configureRedis = null, Action<RedisCacheOptions> configureCache = null)
         {
-            return AddRedis2(builder, o => { });
-        }
+            if (configureRedis != null)
+            {
+                builder.Services.Configure(configureRedis);
+                builder.Services.AddSingleton(typeof(IHubConnectionRouter), typeof(RedisHubConnectionRouter));
+                builder.Services.AddSingleton(typeof(IHubLifetimeManagerFactory), typeof(RedisHubLifetimeManagerFactory));
+            }
 
-        public static ISignalRBuilder AddRedis2(this ISignalRBuilder builder, Action<RedisOptions2> configure)
-        {
-            builder.Services.Configure(configure);
-            builder.Services.AddSingleton(typeof(IHubConnectionRouter), typeof(RedisHubConnectionRouter));
-            builder.Services.AddSingleton(typeof(IHubLifetimeManagerFactory), typeof(RedisHubLifetimeManagerFactory));
+            if (configureCache != null)
+            {
+                builder.Services.AddDistributedRedisCache(_ => { });
+            }
+
             return builder;
         }
     }

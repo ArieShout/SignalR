@@ -7,7 +7,7 @@ import { Observable } from "./Observable"
 import { ILogger, LogLevel } from "./ILogger"
 import { LoggerFactory } from "./Loggers"
 import { HubConnection } from "./HubConnection"
-import { IHubConnectionOptions } from "./IHubConnectionOptions"
+import { IServiceConnectionOptions } from "./IServiceConnectionOptions"
 
 export { TransportType } from "./Transports"
 export { HttpConnection } from "./HttpConnection"
@@ -25,25 +25,27 @@ export class ServiceConnection {
     private url: string = "";
     private connectionPromise: Promise<void>;
     private connection: HubConnection;
-    private readonly options: IHubConnectionOptions;
+    private readonly options: IServiceConnectionOptions;
     private readonly logger: ILogger;
+    private readonly httpClient: HttpClient = new HttpClient();
 
-    constructor(url: string, options: IHubConnectionOptions = {}) {
+    constructor(url: string, options: IServiceConnectionOptions = {}) {
         this.options = options || {};
         this.url = url;
         this.logger = LoggerFactory.createLogger(options.logging);
 
-        // TODO: enable custom authorization
-        const httpClient = new HttpClient();
-        this.connectionPromise = httpClient.get(url)
+        let headers;
+        if (this.options.authHeader) {
+            headers = new Map<string, string>();
+            headers.set("Authorization", this.options.authHeader());
+        }
+
+        this.connectionPromise = this.httpClient.get(url, headers)
             .then(
                 response => {
                     this.logger.log(LogLevel.Information, "Successfully get service endpoint information.");
                     const endpoint: IServiceEndpoint = JSON.parse(response);
-                    if (!this.options.jwtBearer) {
-                        this.options.jwtBearer = () => endpoint.jwtBearer;
-                    }
-                    this.connection = new HubConnection(endpoint.serviceUrl, this.options);
+                    this.connection = this.createHubConnection(endpoint);
                 })
             .catch(error => {
                 this.logger.log(LogLevel.Error, "Failed to get service endpoint information.");
@@ -51,6 +53,28 @@ export class ServiceConnection {
             });
     }
 
+    private createHubConnection(endpoint: IServiceEndpoint): HubConnection {
+        if (!this.options.jwtBearer) {
+            this.options.jwtBearer = () => endpoint.jwtBearer;
+        }
+
+        if (!this.options.httpClient) {
+            this.options.httpClient = this.httpClient;
+        }
+
+        let serviceUrl = endpoint.serviceUrl;
+        if (this.options.uid) {
+            if (serviceUrl.indexOf("?") > -1) {
+                serviceUrl = serviceUrl + "&uid=" + this.options.uid;
+            } else {
+                serviceUrl = serviceUrl + "?uid=" + this.options.uid;
+            }
+        }
+
+        return new HubConnection(serviceUrl, this.options);
+    }
+
+    // TODO: allow restartable connection
     async start(): Promise<void> {
         // TODO: find a better way to assure connection existence
         await this.connectionPromise;

@@ -2,17 +2,11 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Sockets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.SignalR.Service.Core;
 using SocketsSample.Hubs;
 
 namespace SocketsSample
@@ -39,10 +33,10 @@ namespace SocketsSample
             {
                 logLevel = LogLevel.Information;
             }
-            int serviceConnectionNo = Configuration.GetSection("SignalRServerService").GetValue<int>("ServiceConnectionNo");
+
             services.AddSignalRService(hubOption => {
                 hubOption.ConsoleLogLevel = logLevel;
-                hubOption.ServiceConnectionNo = serviceConnectionNo;
+                hubOption.ConnectionNumber = Configuration.GetValue<int>("SignalRServerService:ServiceConnectionNo");
             });
             services.AddCors(o =>
             {

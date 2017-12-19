@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.SignalR.Core.Internal;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using System.Security.Claims;
 using Microsoft.AspNetCore.SignalR.Client.Internal;
+using Microsoft.AspNetCore.Sockets;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.SignalR.Service.Core
@@ -31,7 +32,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         private readonly List<HubConnection> _hubConnections = new List<HubConnection>();
         private readonly HubLifetimeManager<THub> _lifetimeMgr;
         private readonly ILogger<ServiceHubEndPoint<THub>> _logger;
-        private readonly IOptions<ServiceHubOptions> _hubOptions;
+        private readonly ServiceHubOptions _options;
 
         private readonly ConcurrentDictionary<string, List<InvocationHandler>> _handlers =
             new ConcurrentDictionary<string, List<InvocationHandler>>();
@@ -55,11 +56,11 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             ILoggerFactory loggerFactory)
         {
             _lifetimeMgr = lifetimeMgr;
-            _hubOptions = hubOptions;
+            _options = hubOptions.Value;
             _serviceScopeFactory = serviceScopeFactory;
             _authHelper = authHelper;
 
-            loggerFactory.AddConsole(_hubOptions.Value.ConsoleLogLevel);
+            loggerFactory.AddConsole(_options.ConsoleLogLevel);
             _logger = loggerFactory.CreateLogger<ServiceHubEndPoint<THub>>();
 
             _hubContext = hubContext;
@@ -90,12 +91,14 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
             var writingOutputTask = WriteToTransport();
 
-            for (int i = 0; i < _hubOptions.Value.ServiceConnectionNo; i++)
+            for (int i = 0; i < _options.ConnectionNumber; i++)
             {
                 var hubConnection = new HubConnectionBuilder()
                     .WithHubBinder(this)
-                    .WithConsoleLogger(_hubOptions.Value.ConsoleLogLevel) // Debug purpose
-                    .WithUrl(_authHelper.GetServerUrl<THub>(config))
+                    .WithConsoleLogger(_options.ConsoleLogLevel) // Debug purpose
+                    // Add uid to Service URL
+                    .WithUrl($"{_authHelper.GetServerUrl<THub>(config)}?uid={_options.ServerId}")
+                    .WithTransport(TransportType.WebSockets)
                     .WithJwtBearer(() => _authHelper.GetServerToken(config))
                     .WithMessageQueue(requestHandlingQ)
                     .Build();

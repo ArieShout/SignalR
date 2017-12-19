@@ -5,6 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Channels;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR.Core;
 using Microsoft.AspNetCore.SignalR.Core.Internal;
 using Microsoft.AspNetCore.SignalR.Features;
@@ -92,7 +93,11 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
             try
             {
-                var hubName = GetHubName(connectionContext);
+                var hubName = GetHubName(connectionContext) ??
+                              throw new Exception($"No specified hub binded to connection: {connection.ConnectionId}");
+
+                SetConnectionMetadata(connectionContext);
+
                 await RunHubAsync(hubName, connectionContext);
             }
             finally
@@ -107,13 +112,19 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         #region Private Methods
 
-        private static string GetHubName(HubConnectionContext connection)
+        private static string GetHubName(HubConnectionContext connection) =>
+            connection.GetHttpContext()?.GetRouteValue("hubName")?.ToString();
+
+        private static void SetConnectionMetadata(HubConnectionContext connection)
         {
-            if (connection.Metadata.ContainsKey("HubName"))
+            var context = connection.GetHttpContext();
+            if (context == null) return;
+
+            if (context.Request.Query.TryGetValue("uid", out var uid) &&
+                !string.IsNullOrEmpty(uid))
             {
-                return connection.Metadata["HubName"].ToString();
+                connection.AddUid(uid);
             }
-            throw new Exception($"No specified hub binded to connection: {connection.ConnectionId}");
         }
 
         private async Task<bool> ProcessNegotiate(ServiceHubConnectionContext connection)
