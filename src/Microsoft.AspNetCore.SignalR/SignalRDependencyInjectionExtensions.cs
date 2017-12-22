@@ -20,5 +20,17 @@ namespace Microsoft.Extensions.DependencyInjection
             return services.AddSignalRCore()
                 .AddJsonProtocol();
         }
+
+        public static ISignalRServiceBuilder AddSignalRService(this IServiceCollection services)
+        {
+            return AddSignalRService(services, _ => { });
+        }
+
+        public static ISignalRServiceBuilder AddSignalRService(this IServiceCollection services,
+            Action<ServiceOptions> configure)
+        {
+            services.Configure(configure);
+            return services.AddSignalRServiceCore();
+        }
     }
 }

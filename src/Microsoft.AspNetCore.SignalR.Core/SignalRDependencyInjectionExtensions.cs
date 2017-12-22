@@ -23,5 +23,22 @@ namespace Microsoft.Extensions.DependencyInjection
 
             return new SignalRBuilder(services);
         }
+
+        public static ISignalRServiceBuilder AddSignalRServiceCore(this IServiceCollection services)
+        {
+            services.AddSingleton(typeof(IHubProtocolResolver), typeof(DefaultHubProtocolResolver));
+            services.AddSingleton(typeof(IHubContext<>), typeof(HubContext<>));
+            services.AddSingleton(typeof(IUserIdProvider), typeof(DefaultUserIdProvider));
+            services.AddScoped(typeof(IHubActivator<>), typeof(DefaultHubActivator<>));
+
+            services.AddSingleton(typeof(HubLifetimeManager<>), typeof(DefaultServiceHubLifetimeManager<>));
+            services.AddSingleton(typeof(ServiceConnection<>), typeof(ServiceConnection<>));
+            services.AddSingleton(typeof(ServiceAuthHelper));
+
+            services.AddAuthorization();
+            services.AddRouting();
+
+            return new SignalRServiceBuilder(services);
+        }
     }
 }

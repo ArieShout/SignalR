@@ -3,6 +3,8 @@
 
 using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
@@ -40,6 +42,12 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                 throw new InvalidDataException($"Expected '{property}' to be of type {expectedType}.");
             }
             return prop.Value<T>();
+        }
+
+        public static IDictionary<string, string> GetPropertyDictionary(JObject json, string property)
+        {
+            IDictionary<string, JToken> prop = (JObject)json[property];
+            return prop?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString());
         }
     }
 }
