@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using Microsoft.AspNetCore.SignalR.Internal.Formatters;
 using Newtonsoft.Json;
@@ -22,6 +23,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private const string TargetPropertyName = "target";
         private const string ArgumentsPropertyName = "arguments";
         private const string PayloadPropertyName = "payload";
+        private const string MetadataPropertyName = "meta";
 
         // ONLY to be used for application payloads (args, return values, etc.)
         private JsonSerializer _payloadSerializer;
@@ -238,6 +240,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                 writer.WriteValue(message.InvocationId);
             }
             WriteMessageType(writer, type);
+            WriteMessageMetadata(writer, message.Metadata);
         }
 
         private static void WriteMessageType(JsonTextWriter writer, int type)
@@ -246,10 +249,24 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             writer.WriteValue(type);
         }
 
+        private static void WriteMessageMetadata(JsonTextWriter writer, IDictionary<string, string> metadata)
+        {
+            if (metadata == null || !metadata.Any()) return;
+            writer.WritePropertyName(MetadataPropertyName);
+            writer.WriteStartObject();
+            foreach (var kvp in metadata)
+            {
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteValue(kvp.Value);
+            }
+            writer.WriteEndObject();
+        }
+
         private InvocationMessage BindInvocationMessage(JObject json, IInvocationBinder binder)
         {
             var invocationId = JsonUtils.GetOptionalProperty<string>(json, InvocationIdPropertyName, JTokenType.String);
             var target = JsonUtils.GetRequiredProperty<string>(json, TargetPropertyName, JTokenType.String);
+            var metadata = JsonUtils.GetPropertyDictionary(json, MetadataPropertyName);
 
             var args = JsonUtils.GetRequiredProperty<JArray>(json, ArgumentsPropertyName, JTokenType.Array);
 
@@ -258,11 +275,11 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             try
             {
                 var arguments = BindArguments(args, paramTypes);
-                return new InvocationMessage(invocationId, target, argumentBindingException: null, arguments: arguments);
+                return new InvocationMessage(invocationId, target, argumentBindingException: null, arguments: arguments).AddMetadata(metadata);
             }
             catch (Exception ex)
             {
-                return new InvocationMessage(invocationId, target, ExceptionDispatchInfo.Capture(ex));
+                return new InvocationMessage(invocationId, target, ExceptionDispatchInfo.Capture(ex)).AddMetadata(metadata);
             }
         }
 

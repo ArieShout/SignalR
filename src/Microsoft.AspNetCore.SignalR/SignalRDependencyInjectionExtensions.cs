@@ -19,5 +19,17 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSockets();
             return services.AddSignalRCore();
         }
+
+        public static ISignalRServiceBuilder AddSignalRService(this IServiceCollection services)
+        {
+            return AddSignalRService(services, _ => { });
+        }
+
+        public static ISignalRServiceBuilder AddSignalRService(this IServiceCollection services,
+            Action<ServiceOptions> configure)
+        {
+            services.Configure(configure);
+            return services.AddSignalRServiceCore();
+        }
     }
 }
