@@ -42,7 +42,11 @@ namespace SignalRServiceSample
                         $"{Configuration["Auth:JWT:Audience"]}/client/",
                         $"{Configuration["Auth:JWT:Audience"]}/server/"
                     };
-                    options.SigningKeyProvider = () => new[] {Configuration["Auth:JWT:IssuerSigningKey"]};
+                    options.SigningKeyProvider = () => new[]
+                    {
+                        Configuration["Auth:JWT:IssuerSigningKey"],
+                        Configuration["Auth:JWT:IssuerSigningKey2"]
+                    };
                     options.EnableStickySession = bool.TryParse(Configuration["EnableStickySession"], out var value) && value;
                 });
 
