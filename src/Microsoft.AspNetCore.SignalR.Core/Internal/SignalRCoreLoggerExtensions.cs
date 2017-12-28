@@ -64,6 +64,9 @@ namespace Microsoft.AspNetCore.SignalR.Internal
         private static readonly Action<ILogger, string, Exception> _invalidReturnValueFromStreamingMethod =
             LoggerMessage.Define<string>(LogLevel.Error, new EventId(18, nameof(InvalidReturnValueFromStreamingMethod)), "A streaming method returned a value that cannot be used to build enumerator {hubMethod}.");
 
+        private static readonly Action<ILogger, CompletionMessage, Exception> _receivedCompletion =
+            LoggerMessage.Define<CompletionMessage>(LogLevel.Debug, new EventId(19, nameof(ReceivedCompletion)), "Received completion message: {message}.");
+
         // Category: HubConnectionContext
         private static readonly Action<ILogger, string, Exception> _usingHubProtocol =
             LoggerMessage.Define<string>(LogLevel.Information, new EventId(1, nameof(UsingHubProtocol)), "Using HubProtocol '{protocol}'.");
@@ -202,6 +205,11 @@ namespace Microsoft.AspNetCore.SignalR.Internal
         public static void FoundImplementationForProtocol(this ILogger logger, string protocolName)
         {
             _foundImplementationForProtocol(logger, protocolName, null);
+        }
+
+        public static void ReceivedCompletion(this ILogger logger, CompletionMessage message)
+        {
+            _receivedCompletion(logger, message, null);
         }
     }
 }
