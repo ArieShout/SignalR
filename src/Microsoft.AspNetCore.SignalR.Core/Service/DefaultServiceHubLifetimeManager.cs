@@ -80,6 +80,11 @@ namespace Microsoft.AspNetCore.SignalR
             return connection.WriteAsync(message);
         }
 
+        public override Task InvokeConnectionsAsync(IReadOnlyList<string> connectionIds, string methodName, object[] args)
+        {
+            throw new NotImplementedException();
+        }
+
         public override Task InvokeGroupAsync(string groupName, string methodName, object[] args)
         {
             if (groupName == null)
