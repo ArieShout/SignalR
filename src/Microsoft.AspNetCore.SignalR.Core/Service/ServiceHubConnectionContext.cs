@@ -1,22 +1,28 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Runtime.ExceptionServices;
-using System.Threading;
-using System.Threading.Channels;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Sockets;
+using Microsoft.AspNetCore.Sockets.Client;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.SignalR
 {
     public class ServiceHubConnectionContext : HubConnectionContext
     {
+        private readonly HttpConnection _httpConnection;
         private readonly ConnectionContext _connectionContext;
-        private readonly TaskCompletionSource<object> _abortCompletedTcs = new TaskCompletionSource<object>();
+        private string _connectionId = string.Empty;
 
-        public ServiceHubConnectionContext(ConnectionContext connectionContext, TimeSpan keepAliveInterval, ILoggerFactory loggerFactory) : base(connectionContext, keepAliveInterval, loggerFactory)
+        public ServiceHubConnectionContext(HttpConnection httpConnection, ConnectionContext connectionContext, TimeSpan keepAliveInterval, ILoggerFactory loggerFactory) : base(connectionContext, keepAliveInterval, loggerFactory)
         {
+            _httpConnection = httpConnection;
             _connectionContext = connectionContext;
+            _connectionId = connectionContext.ConnectionId;
+        }
+
+        public override string ConnectionId => _connectionId;
+
+        public void SetConnectionId(string connectionId)
+        {
+            _connectionId = connectionId;
         }
     }
 }
