@@ -36,9 +36,9 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton(typeof(HubLifetimeManager<>), typeof(DefaultServiceHubLifetimeManager<>));
             services.AddSingleton(typeof(ServiceConnection<>), typeof(ServiceConnection<>));
             services.AddSingleton(typeof(ServiceAuthHelper));
+            services.AddSingleton(typeof(IHubInvoker<>), typeof(HubInvoker<>));
 
             services.AddAuthorization();
-            services.AddRouting();
 
             return new SignalRServiceBuilder(services);
         }

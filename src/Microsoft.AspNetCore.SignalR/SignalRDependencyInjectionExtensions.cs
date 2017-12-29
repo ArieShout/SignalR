@@ -30,6 +30,8 @@ namespace Microsoft.Extensions.DependencyInjection
             Action<ServiceOptions> configure)
         {
             services.Configure(configure);
+            services.AddRouting();
+
             return services.AddSignalRServiceCore();
         }
     }
