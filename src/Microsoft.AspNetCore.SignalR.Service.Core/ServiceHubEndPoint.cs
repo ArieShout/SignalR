@@ -101,6 +101,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     .WithTransport(TransportType.WebSockets)
                     .WithJwtBearer(() => _authHelper.GetServerToken(config))
                     .WithMessageQueue(requestHandlingQ)
+                    .WithHubProtocol(_options.ProtocolType == ProtocolType.Binary ?
+                        new MessagePackHubProtocol() : (IHubProtocol)new JsonHubProtocol())
                     .Build();
                 _hubConnections.Add(hubConnection);
             }

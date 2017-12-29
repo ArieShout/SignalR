@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 
 namespace Microsoft.AspNetCore.SignalR.Service.Core
 {
@@ -16,6 +17,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         public int ConnectionNumber { get; set; } = 2;
 
         public string ServerId { get; set; } = Guid.NewGuid().ToString();
+
+        public ProtocolType ProtocolType { get; set; } = ProtocolType.Binary;
 
         // TODO: selectively pass claims to SignalR service
         public Func<HttpContext, IEnumerable<Claim>> ClaimProvider { get; set; } =

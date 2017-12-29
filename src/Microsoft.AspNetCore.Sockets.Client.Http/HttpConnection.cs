@@ -142,6 +142,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
                 if (_requestedTransportType == TransportType.WebSockets)
                 {
                     _transport = _transportFactory.CreateTransport(TransportType.WebSockets);
+                    _connectionId = "default";
                 }
                 else
                 {

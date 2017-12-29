@@ -12,7 +12,7 @@ using System.Linq;
 
 namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 {
-    public class MessagePackHubProtocol : IHubProtocol
+    public class MessagePackHubProtocol2 : IHubProtocol
     {
         private const int ErrorResult = 1;
         private const int VoidResult = 2;
@@ -24,11 +24,11 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
         public ProtocolType Type => ProtocolType.Binary;
 
-        public MessagePackHubProtocol()
+        public MessagePackHubProtocol2()
             : this(CreateDefaultSerializationContext())
         { }
 
-        public MessagePackHubProtocol(SerializationContext serializationContext)
+        public MessagePackHubProtocol2(SerializationContext serializationContext)
         {
             _serializationContext = serializationContext;
         }
@@ -113,17 +113,19 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private static object[] BindArguments(Unpacker unpacker, Type[] parameterTypes)
         {
             var argumentCount = ReadArrayLength(unpacker, "arguments");
+            /*
             if (parameterTypes.Length != argumentCount)
             {
                 throw new FormatException(
                     $"Invocation provides {argumentCount} argument(s) but target expects {parameterTypes.Length}.");
             }
+            */
             try
             {
                 var arguments = new object[argumentCount];
                 for (var i = 0; i < argumentCount; i++)
                 {
-                    arguments[i] = DeserializeObject(unpacker, parameterTypes[i], "argument");
+                    arguments[i] = DeserializeObject(unpacker, /*parameterTypes[i]*/typeof(String), "argument");
                 }
 
                 return arguments;
