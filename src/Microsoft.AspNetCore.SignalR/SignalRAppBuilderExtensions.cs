@@ -4,6 +4,7 @@
 using System;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.Builder
 {
@@ -35,6 +36,23 @@ namespace Microsoft.AspNetCore.Builder
                 throw new Exception($"Invalid SignalR Service connection string: {connectionString}");
             }
 
+            app.UseRouter(routeBuilder.Build());
+            return app;
+        }
+
+        public static IApplicationBuilder UseSignalRServer(this IApplicationBuilder app)
+        {
+            app.UseAuthentication();
+            app.UseSockets(routes =>
+            {
+                var hubRouteBuilder = new HubRouteBuilder(routes);
+                hubRouteBuilder.MapHub<ClientHub>("client/{hubName}");
+                hubRouteBuilder.MapHub<ServerHub>("server/{hubName}");
+            });
+
+            var routeBuilder = new RouteBuilder(app);
+            var healthDataProvider = app.ApplicationServices.GetRequiredService<IHubStatusManager>();
+            routeBuilder.MapRoute("health", healthDataProvider.GetHubStatus);
             app.UseRouter(routeBuilder.Build());
             return app;
         }

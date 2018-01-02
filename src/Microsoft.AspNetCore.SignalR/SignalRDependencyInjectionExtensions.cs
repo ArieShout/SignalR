@@ -33,5 +33,19 @@ namespace Microsoft.Extensions.DependencyInjection
 
             return services.AddSignalRServiceCore();
         }
+
+        public static ISignalRBuilder AddSignalRServer(this IServiceCollection services)
+        {
+            return AddSignalRServer(services, _ => { });
+        }
+
+        public static ISignalRBuilder AddSignalRServer(this IServiceCollection services,
+            Action<ServerOptions> configure)
+        {
+            services.Configure(configure);
+            services.AddRouting();
+
+            return services.AddSignalRServerCore();
+        }
     }
 }
