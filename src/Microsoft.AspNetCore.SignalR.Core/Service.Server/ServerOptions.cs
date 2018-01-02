@@ -37,21 +37,21 @@ namespace Microsoft.AspNetCore.SignalR
 
         public void Configure(JwtBearerOptions options)
         {
-            options.TokenValidationParameters =
-                new TokenValidationParameters
-                {
-                    // TODO: support validation of issuer
-                    ValidateIssuer = false,
+            var validationParams = options.TokenValidationParameters;
+            // TODO: support validation of issuer
+            validationParams.ValidateIssuer = false;
 
-                    ValidateLifetime = true,
-                    LifetimeValidator = (before, expires, token, parameters) => expires > DateTime.UtcNow,
+            validationParams.ValidateLifetime = true;
+            validationParams.LifetimeValidator =
+                (before, expires, token, parameters) => expires > DateTime.UtcNow;
 
-                    ValidateAudience = _serverOptions.AudienceProvider != null,
-                    ValidAudiences = _serverOptions.AudienceProvider?.Invoke(),
+            validationParams.ValidateAudience = _serverOptions.AudienceProvider != null;
+            validationParams.ValidAudiences = _serverOptions.AudienceProvider?.Invoke();
 
-                    ValidateIssuerSigningKey = _serverOptions.SigningKeyProvider != null,
-                    IssuerSigningKeys = _serverOptions.SigningKeyProvider?.Invoke().Select(x => new SymmetricSecurityKey(Encoding.UTF8.GetBytes(x))) 
-                };
+            validationParams.ValidateIssuerSigningKey = _serverOptions.SigningKeyProvider != null;
+            validationParams.IssuerSigningKeys = _serverOptions.SigningKeyProvider?.Invoke()
+                .Select(x => new SymmetricSecurityKey(Encoding.UTF8.GetBytes(x)));
+
 
             options.Events = new JwtBearerEvents
             {

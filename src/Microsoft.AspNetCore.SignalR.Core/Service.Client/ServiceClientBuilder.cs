@@ -6,19 +6,19 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.SignalR
 {
-    public class ServiceConnectionBuilder
+    public class ServiceClientBuilder
     {
         public IServiceProvider ApplicationServices { get; }
 
-        public ServiceConnectionBuilder(IServiceProvider applicationServices)
+        public ServiceClientBuilder(IServiceProvider applicationServices)
         {
             ApplicationServices = applicationServices;
         }
 
-        public async void BuildServiceHub<THub>(ServiceCredential credential) where THub : Hub
+        public async void BuildServiceClient<THub>(ServiceCredential credential) where THub : Hub
         {
-            var serviceConnection = ApplicationServices.GetRequiredService<ServiceConnection<THub>>();
-            serviceConnection.UseHub(credential);
+            var serviceConnection = ApplicationServices.GetRequiredService<ServiceClient<THub>>();
+            serviceConnection.UseService(credential);
             await serviceConnection.StartAsync();
         }
     }

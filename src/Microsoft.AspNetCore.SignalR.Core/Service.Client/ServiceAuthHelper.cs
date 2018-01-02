@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Sockets.Internal;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
@@ -28,13 +29,10 @@ namespace Microsoft.AspNetCore.SignalR
         public async Task GetServiceEndpoint<THub>(HttpContext context, IList<IAuthorizeData> authorizeData,
             ServiceCredential credential) where THub : Hub
         {
-            // TODO: import AuthorizeHelper from Microsoft.AspNetCore.Sockets.Http package
-            /*
             if (!await AuthorizeHelper.AuthorizeAsync(context, authorizeData))
             {
                 return;
             }
-            */
 
             var serviceUrl = GetClientUrl<THub>(credential);
             var jwtBearer = GetClientToken<THub>(context, credential);

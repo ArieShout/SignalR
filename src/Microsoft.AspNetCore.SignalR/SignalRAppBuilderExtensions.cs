@@ -24,7 +24,7 @@ namespace Microsoft.AspNetCore.Builder
             Action<ServiceRouteBuilder> config)
         {
             var routeBuilder = new RouteBuilder(app);
-            var connectionBuilder = new ServiceConnectionBuilder(app.ApplicationServices);
+            var connectionBuilder = new ServiceClientBuilder(app.ApplicationServices);
 
             if (ServiceCredential.TryParse(connectionString, out var credential))
             {

@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace Microsoft.AspNetCore.SignalR
 {
-    public class DefaultServiceHubLifetimeManager<THub> : HubLifetimeManager<THub>
+    public class ServiceHubLifetimeManager<THub> : HubLifetimeManager<THub>
     {
         private long _nextInvocationId;
         private readonly HubConnectionList _connections = new HubConnectionList();
