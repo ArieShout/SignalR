@@ -13,10 +13,10 @@ namespace Microsoft.AspNetCore.SignalR
     public class ServiceRouteBuilder
     {
         private readonly RouteBuilder _routes;
-        private readonly ServiceConnectionBuilder _builder;
+        private readonly ServiceClientBuilder _builder;
         private readonly ServiceCredential _credential;
 
-        public ServiceRouteBuilder(RouteBuilder routes, ServiceConnectionBuilder builder, ServiceCredential credential)
+        public ServiceRouteBuilder(RouteBuilder routes, ServiceClientBuilder builder, ServiceCredential credential)
         {
             _routes = routes;
             _builder = builder;
@@ -30,7 +30,7 @@ namespace Microsoft.AspNetCore.SignalR
             var authHelper = _routes.ServiceProvider.GetRequiredService<ServiceAuthHelper>();
 
             _routes.MapRoute(path, c => authHelper.GetServiceEndpoint<THub>(c, authorizeData, _credential));
-            _builder.BuildServiceHub<THub>(_credential);
+            _builder.BuildServiceClient<THub>(_credential);
         }
     }
 }

@@ -36,8 +36,8 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton(typeof(IUserIdProvider), typeof(DefaultUserIdProvider));
             services.AddScoped(typeof(IHubActivator<>), typeof(DefaultHubActivator<>));
 
-            services.AddSingleton(typeof(HubLifetimeManager<>), typeof(DefaultServiceHubLifetimeManager<>));
-            services.AddSingleton(typeof(ServiceConnection<>), typeof(ServiceConnection<>));
+            services.AddSingleton(typeof(HubLifetimeManager<>), typeof(ServiceHubLifetimeManager<>));
+            services.AddSingleton(typeof(ServiceClient<>), typeof(ServiceClient<>));
             services.AddSingleton(typeof(ServiceAuthHelper));
             services.AddSingleton(typeof(IHubInvoker<>), typeof(HubInvoker<>));
 

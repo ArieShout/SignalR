@@ -1,232 +1,238 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
-// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
-
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using Microsoft.Extensions.Logging;
+﻿using System;
+using System.Security.Claims;
+using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR.Internal;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.SignalR.Core.Internal;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Sockets;
 using Microsoft.AspNetCore.Sockets.Client;
-using Microsoft.AspNetCore.Sockets.Client.Http;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
-namespace Microsoft.AspNetCore.SignalR
+namespace Microsoft.AspNetCore.SignalR.Service.Client
 {
-    public class ServiceConnection<THub> : IInvocationBinder where THub : Hub
+    public class ServiceConnection<THub> : BaseHubConnection where THub : Hub
     {
-        private const string OnConnectedAsyncMethod = "OnConnectedAsync";
-        private const string OnDisconnectedAsyncMethod = "OnDisconnectedAsync";
+        private const string OnConnectedAsyncMethod = "onconnectedasync";
+        private const string OnDisconnectedAsyncMethod = "ondisconnectedasync";
 
-        private readonly List<HttpConnection> _httpConnections = new List<HttpConnection>();
-        private readonly HubLifetimeManager<THub> _lifetimeMgr;
-        private readonly ILoggerFactory _loggerFactory;
-        private readonly ILogger<ServiceConnection<THub>> _logger;
-        private readonly ServiceOptions _serviceOptions;
-
-        //private readonly ConcurrentDictionary<string, List<InvocationHandler>> _handlers =
-        //    new ConcurrentDictionary<string, List<InvocationHandler>>();
-
-        // This HubConnectionList is duplicate with HubLifetimeManager
+        private readonly HubLifetimeManager<THub> _lifetimeManager;
+        private readonly IHubInvoker<THub> _hubInvoker;
         private readonly HubConnectionList _connections = new HubConnectionList();
 
-        private readonly ServiceAuthHelper _authHelper;
+        private readonly Channel<HubMessage> _output;
 
-        private readonly IHubInvoker<THub> _hubInvoker;
+        private Task _writeTask;
+        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
-        //private readonly List<string> _methods = new List<string>();
-
-        public ServiceConnection(HubLifetimeManager<THub> lifetimeMgr,
-            IOptions<ServiceOptions> serviceOptions,
-            ServiceAuthHelper authHelper,
-            ILoggerFactory loggerFactory,
-            IHubInvoker<THub> hubInvoker)
+        public ServiceConnection(IConnection connection,
+            IHubProtocol protocol,
+            HubLifetimeManager<THub> lifetimeManager,
+            IHubInvoker<THub> hubInvoker,
+            ILoggerFactory loggerFactory) :
+            base(connection, protocol, loggerFactory)
         {
-            _lifetimeMgr = lifetimeMgr;
-            _serviceOptions = serviceOptions.Value;
-            _authHelper = authHelper;
             _hubInvoker = hubInvoker;
+            _lifetimeManager = lifetimeManager;
+            _output = Channel.CreateUnbounded<HubMessage>();
 
-            _loggerFactory = loggerFactory;
-            _logger = loggerFactory.CreateLogger<ServiceConnection<THub>>();
+            connection.OnReceived((data, state) => ((ServiceConnection<THub>)state).OnDataReceivedAsync(data), this);
         }
 
-        public void UseHub(ServiceCredential credential)
+        public override async Task StartAsync()
         {
-            var serviceUrl = GetServiceUrl(credential);
-            var httpOptions = new HttpOptions
-            {
-                JwtBearerTokenFactory = () => _authHelper.GetServerToken<THub>(credential)
-            };
+            await base.StartAsync();
 
-            for (var i = 0; i < _serviceOptions.ConnectionNumber; i++)
-            {
-                var httpConnection = CreateHttpConnection(serviceUrl, httpOptions);
-                _httpConnections.Add(httpConnection);
-            }
+            _writeTask = WriteToTransport();
         }
 
-        public async Task StartAsync()
+        public override async Task StopAsync()
         {
-            try
+            if (!_cancellationTokenSource.IsCancellationRequested)
             {
-                var tasks = _httpConnections.Select(c => c.StartAsync());
-                await Task.WhenAll(tasks);
+                _cancellationTokenSource.Cancel();
             }
-            catch (Exception)
-            {
-                //_logger.ServiceConnectionCanceled(e);
-            }
+
+            await base.StopAsync();
         }
 
         #region Private Methods
 
-        private Uri GetServiceUrl(ServiceCredential credential)
+        private async Task WriteToTransport()
         {
-            return new Uri(_authHelper.GetServerUrl<THub>(credential));
-        }
-
-        private HttpConnection CreateHttpConnection(Uri serviceUrl, HttpOptions httpOptions)
-        {
-            var httpConnection =
-                new HttpConnection(serviceUrl, TransportType.WebSockets, _loggerFactory, httpOptions);
-            var connectionContext = new DefaultConnectionContext(string.Empty, httpConnection.Transport,
-                httpConnection.Application);
-            var hubConnection =
-                new HubConnectionContext(connectionContext, TimeSpan.FromSeconds(30), _loggerFactory);
-
-            httpConnection.OnReceived((data, state) => ((ServiceConnection<THub>)state).OnDataReceivedAsync(httpConnection, hubConnection, data), this);
-            httpConnection.Closed += Shutdown;
-
-            return httpConnection;
-        }
-
-        private async Task OnDataReceivedAsync(HttpConnection httpConnection, HubConnectionContext connection, byte[] data)
-        {
-            if (!connection.ProtocolReaderWriter.ReadMessages(data, _hubInvoker, out var messages)) return;
-
-            foreach (var message in messages)
+            while (await _output.Reader.WaitToReadAsync())
             {
-                switch (message)
+                while (_output.Reader.TryRead(out var message))
                 {
-                    case InvocationMessage invocationMessage:
-                        _logger.ReceivedHubInvocation(invocationMessage);
-
-                        // Don't wait on the result of execution, continue processing other
-                        // incoming messages on this connection.
-                        _ = OnInvocationAsync(httpConnection, invocationMessage);
-                        break;
-
-                    case StreamInvocationMessage streamInvocationMessage:
-                        _logger.ReceivedStreamHubInvocation(streamInvocationMessage);
-
-                        // Don't wait on the result of execution, continue processing other
-                        // incoming messages on this connection.
-                        _ = _hubInvoker.OnInvocationAsync(connection, streamInvocationMessage,
-                            isStreamedInvocation: true);
-                        break;
-
-                    case CancelInvocationMessage cancelInvocationMessage:
-                        // Check if there is an associated active stream and cancel it if it exists.
-                        // The cts will be removed when the streaming method completes executing
-                        if (connection.ActiveRequestCancellationSources.TryGetValue(
-                            cancelInvocationMessage.InvocationId, out var cts))
-                        {
-                            _logger.CancelStream(cancelInvocationMessage.InvocationId);
-                            cts.Cancel();
-                        }
-                        else
-                        {
-                            // Stream can be canceled on the server while client is canceling stream.
-                            _logger.UnexpectedCancel();
-                        }
-                        break;
-
-                    case CompletionMessage completionMessage:
-                        _logger.ReceivedCompletion(completionMessage);
-
-                        _ = _hubInvoker.OnCompletionAsync(connection, completionMessage);
-                        break;
-
-                    case PingMessage _:
-                        // We don't care about pings
-                        break;
-
-                    // Other kind of message we weren't expecting
-                    default:
-                        _logger.UnsupportedMessageReceived(message.GetType().FullName);
-                        throw new NotSupportedException($"Received unsupported message: {message}");
+                    await SendMessageAsync(message);
                 }
             }
-
-            await Task.CompletedTask;
         }
 
-        private void Shutdown(Exception exception = null)
+        private async Task OnDataReceivedAsync(byte[] data)
         {
+            if (ProtocolReaderWriter.ReadMessages(data, _hubInvoker, out var messages))
+            {
+                foreach (var message in messages)
+                {
+                    switch (message)
+                    {
+                        case InvocationMessage invocationMessage:
+                            Logger.ReceivedHubInvocation(invocationMessage);
+
+                            // Don't wait on the result of execution, continue processing other
+                            // incoming messages on this connection.
+                            _ = OnInvocationAsync(invocationMessage);
+                            break;
+
+                        case StreamInvocationMessage streamInvocationMessage:
+                            Logger.ReceivedStreamHubInvocation(streamInvocationMessage);
+
+                            // Don't wait on the result of execution, continue processing other
+                            // incoming messages on this connection.
+                            _ = OnInvocationAsync(streamInvocationMessage, isStreamedInvocation: true);
+                            break;
+
+                        case CancelInvocationMessage cancelInvocationMessage:
+                            _ = OnCancelInvocationAsync(cancelInvocationMessage);
+                            break;
+
+                        case CompletionMessage completionMessage:
+                            Logger.ReceivedCompletion(completionMessage);
+
+                            _ = OnCompletionAsync(completionMessage);
+                            break;
+
+                        case PingMessage _:
+                            // We don't care about pings
+                            break;
+
+                        // Other kind of message we weren't expecting
+                        default:
+                            Logger.UnsupportedMessageReceived(message.GetType().FullName);
+                            throw new NotSupportedException($"Received unsupported message: {message}");
+                    }
+                }
+
+                await Task.CompletedTask;
+            }
         }
 
-        private async Task OnInvocationAsync(HttpConnection httpConnection, InvocationMessage message)
+        private async Task OnInvocationAsync(HubMethodInvocationMessage message, bool isStreamedInvocation = false)
         {
             switch (message.Target.ToLower())
             {
                 case OnConnectedAsyncMethod:
-                    await OnConnectedAsync(httpConnection, message);
+                    await OnConnectedAsync(message);
                     break;
 
                 case OnDisconnectedAsyncMethod:
-                    await OnDisconnectedAsync(httpConnection, message);
+                    await OnDisconnectedAsync(message);
                     break;
 
                 default:
-                    await OnInvocationAsync(message);
+                    await OnMethodInvocationAsync(message, isStreamedInvocation);
                     break;
             }
         }
 
-        private async Task OnConnectedAsync(HttpConnection httpConnection, HubInvocationMessage message)
+        private async Task OnConnectedAsync(HubInvocationMessage message)
         {
-            var connection = CreateHubConnectionContext(httpConnection, message);
+            var connection = CreateHubConnectionContext(message);
+            _connections.Add(connection);
 
-            await _lifetimeMgr.OnConnectedAsync(connection);
+            await _lifetimeManager.OnConnectedAsync(connection);
 
             await _hubInvoker.OnConnectedAsync(connection);
 
-            await SendMessageAsync(httpConnection, connection, CompletionMessage.WithResult(message.InvocationId, ""));
+            await SendMessageAsync(CompletionMessage.WithResult(message.InvocationId, ""));
         }
 
-        private async Task OnDisconnectedAsync(HttpConnection httpConnection, HubInvocationMessage message)
+        private async Task OnDisconnectedAsync(HubInvocationMessage message)
         {
             var connection = GetHubConnectionContext(message);
+            if (connection == null)
+            {
+                await SendMessageAsync(CompletionMessage.WithError(message.InvocationId, "No connection found."));
+                return;
+            }
 
             await _hubInvoker.OnDisconnectedAsync(connection, null);
 
-            await _lifetimeMgr.OnDisconnectedAsync(connection);
+            await _lifetimeManager.OnDisconnectedAsync(connection);
 
-            await SendMessageAsync(httpConnection, connection, CompletionMessage.WithResult(message.InvocationId, ""));
+            await SendMessageAsync(CompletionMessage.WithResult(message.InvocationId, ""));
+
+            _connections.Remove(connection);
         }
 
-        private async Task OnInvocationAsync(HubMethodInvocationMessage message)
+        private async Task OnMethodInvocationAsync(HubMethodInvocationMessage message, bool isStreamedInvocation)
         {
             var connection = GetHubConnectionContext(message);
-            await _hubInvoker.OnInvocationAsync(connection, message, false);
+            if (connection == null)
+            {
+                await SendMessageAsync(CompletionMessage.WithError(message.InvocationId, "No connection found."));
+                return;
+            }
+
+            await _hubInvoker.OnInvocationAsync(connection, message, isStreamedInvocation);
         }
 
-        private HubConnectionContext CreateHubConnectionContext(HttpConnection httpConnection,
-            HubInvocationMessage message)
+        private async Task OnCancelInvocationAsync(CancelInvocationMessage message)
         {
-            var context = CreateConnectionContext(httpConnection, message);
-            return new HubConnectionContext(context, TimeSpan.FromSeconds(30), _loggerFactory);
+            var connection = GetHubConnectionContext(message);
+            if (connection == null)
+            {
+                await SendMessageAsync(CompletionMessage.WithError(message.InvocationId, "No connection found."));
+                return;
+            }
+
+            // Check if there is an associated active stream and cancel it if it exists.
+            // The cts will be removed when the streaming method completes executing
+            if (connection.ActiveRequestCancellationSources.TryGetValue(message.InvocationId, out var cts))
+            {
+                Logger.CancelStream(message.InvocationId);
+                cts.Cancel();
+            }
+            else
+            {
+                // Stream can be canceled on the server while client is canceling stream.
+                Logger.UnexpectedCancel();
+            }
         }
 
-        private DefaultConnectionContext CreateConnectionContext(HttpConnection httpConnection, HubInvocationMessage message)
+        private async Task OnCompletionAsync(CompletionMessage message)
+        {
+            var connection = GetHubConnectionContext(message);
+            if (connection == null)
+            {
+                await SendMessageAsync(CompletionMessage.WithError(message.InvocationId, "No connection found."));
+                return;
+            }
+
+            await _hubInvoker.OnCompletionAsync(connection, message);
+        }
+
+        private HubConnectionContext CreateHubConnectionContext(HubInvocationMessage message)
+        {
+            var context = CreateConnectionContext(message);
+            // TODO: configurable KeepAliveInterval
+            return new HubConnectionContext(context, TimeSpan.FromSeconds(30), LoggerFactory)
+                {
+                    Output = _output,
+                    ProtocolReaderWriter = ProtocolReaderWriter
+                };
+        }
+
+        private DefaultConnectionContext CreateConnectionContext(HubInvocationMessage message)
         {
             var connectionId = message.GetConnectionId();
-            var connectionContext = new DefaultConnectionContext(connectionId, httpConnection.Transport, httpConnection.Application);
+            // TODO:
+            // No channels for logical ConnectionContext. These channels won't be used in current context.
+            // So no exception or error will be thrown.
+            // We should have a cleaner approach to reuse DefaultConnectionContext for SignalR Service.
+            var connectionContext = new DefaultConnectionContext(connectionId, null, null);
             if (message.TryGetClaims(out var claims))
             {
                 connectionContext.User = new ClaimsPrincipal();
@@ -240,21 +246,11 @@ namespace Microsoft.AspNetCore.SignalR
             return message.TryGetConnectionId(out var connectionId) ? _connections[connectionId] : null;
         }
 
-        private static async Task SendMessageAsync(HttpConnection httpConnection, HubConnectionContext hubConnection,
-            HubMessage hubMessage)
+        private async Task SendMessageAsync(HubMessage hubMessage)
         {
-            var payload = hubConnection.ProtocolReaderWriter.WriteMessage(hubMessage);
-            await httpConnection.SendAsync(payload);
-        }
-
-        Type IInvocationBinder.GetReturnType(string invocationId)
-        {
-            return _hubInvoker.GetReturnType(invocationId);
-        }
-
-        Type[] IInvocationBinder.GetParameterTypes(string methodName)
-        {
-            return _hubInvoker.GetParameterTypes(methodName);
+            var payload = ProtocolReaderWriter.WriteMessage(hubMessage);
+            // TODO:
+            await Connection.SendAsync(payload, CancellationToken.None);
         }
 
         #endregion
