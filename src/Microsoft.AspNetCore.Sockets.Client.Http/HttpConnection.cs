@@ -32,7 +32,6 @@ namespace Microsoft.AspNetCore.Sockets.Client
         private readonly object _stateChangeLock = new object();
 
         private volatile ChannelConnection<byte[], SendMessage> _transportChannel;
-        private volatile ChannelConnection<SendMessage, byte[]> _applicationChannel;
         private readonly HttpClient _httpClient;
         private readonly HttpOptions _httpOptions;
         private volatile ITransport _transport;
@@ -54,10 +53,6 @@ namespace Microsoft.AspNetCore.Sockets.Client
         public IFeatureCollection Features { get; } = new FeatureCollection();
 
         public event Action<Exception> Closed;
-
-        public Channel<byte[]> Transport => _transportChannel.Input;
-
-        public Channel<byte[]> Application => _applicationChannel.Output;
 
         public HttpConnection(Uri url)
             : this(url, TransportType.All)
@@ -324,13 +319,13 @@ namespace Microsoft.AspNetCore.Sockets.Client
         {
             var applicationToTransport = Channel.CreateUnbounded<SendMessage>();
             var transportToApplication = Channel.CreateUnbounded<byte[]>();
-            _applicationChannel = ChannelConnection.Create(applicationToTransport, transportToApplication);
+            var applicationSide = ChannelConnection.Create(applicationToTransport, transportToApplication);
             _transportChannel = ChannelConnection.Create(transportToApplication, applicationToTransport);
 
             // Start the transport, giving it one end of the pipeline
             try
             {
-                await _transport.StartAsync(connectUrl, _applicationChannel, GetTransferMode(), _connectionId, this);
+                await _transport.StartAsync(connectUrl, applicationSide, GetTransferMode(), _connectionId, this);
 
                 // actual transfer mode can differ from the one that was requested so set it on the feature
                 if (!_transport.Mode.HasValue)
