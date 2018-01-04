@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 import { ConnectionClosed } from "./Common"
-import { HttpClient } from "./HttpClient"
+import { HttpClient, DefaultHttpClient } from "./HttpClient"
 import { Observable } from "./Observable"
 import { ILogger, LogLevel } from "./ILogger"
 import { LoggerFactory } from "./Loggers"
@@ -27,7 +27,7 @@ export class ServiceConnection {
     private connection: HubConnection;
     private readonly options: IServiceConnectionOptions;
     private readonly logger: ILogger;
-    private readonly httpClient: HttpClient = new HttpClient();
+    private readonly httpClient: HttpClient = new DefaultHttpClient();
 
     constructor(url: string, options: IServiceConnectionOptions = {}) {
         this.options = options || {};
@@ -44,7 +44,7 @@ export class ServiceConnection {
             .then(
                 response => {
                     this.logger.log(LogLevel.Information, "Successfully get service endpoint information.");
-                    const endpoint: IServiceEndpoint = JSON.parse(response);
+                    const endpoint: IServiceEndpoint = JSON.parse(response.content as string);
                     this.connection = this.createHubConnection(endpoint);
                 })
             .catch(error => {
