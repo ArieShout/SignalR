@@ -21,12 +21,12 @@ namespace Microsoft.AspNetCore.Sockets
         }
 
         public void MapSocket(string path, Action<ISocketBuilder> socketConfig) =>
-            MapSocket(new PathString(path), new HttpSocketOptions(), socketConfig);
+            MapSocket(path, new HttpSocketOptions(), socketConfig);
 
         public void MapSocket(PathString path, Action<ISocketBuilder> socketConfig) =>
             MapSocket(path, new HttpSocketOptions(), socketConfig);
 
-        public void MapSocket(PathString path, HttpSocketOptions options, Action<ISocketBuilder> socketConfig)
+        public void MapSocket(string path, HttpSocketOptions options, Action<ISocketBuilder> socketConfig)
         {
             var socketBuilder = new SocketBuilder(_routes.ServiceProvider);
             socketConfig(socketBuilder);

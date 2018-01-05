@@ -25,7 +25,7 @@ namespace Microsoft.AspNetCore.SignalR
 
         public Type[] GetParameterTypes(string methodName)
         {
-            throw new NotImplementedException();
+            return null;
         }
 
         public async Task OnConnectedAsync(HubConnectionContext connection)

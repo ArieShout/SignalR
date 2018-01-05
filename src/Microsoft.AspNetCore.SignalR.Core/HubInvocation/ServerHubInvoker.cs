@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 
 namespace Microsoft.AspNetCore.SignalR
 {
-    public class ServerHubInvoker : IHubInvoker<ClientHub>
+    public class ServerHubInvoker : IHubInvoker<ServerHub>
     {
         private readonly IHubMessageBroker _hubMessageBroker;
         private readonly IHubStatusManager _hubStatusManager;
@@ -25,7 +25,7 @@ namespace Microsoft.AspNetCore.SignalR
 
         public Type[] GetParameterTypes(string methodName)
         {
-            throw new NotImplementedException();
+            return null;
         }
 
         public async Task OnConnectedAsync(HubConnectionContext connection)

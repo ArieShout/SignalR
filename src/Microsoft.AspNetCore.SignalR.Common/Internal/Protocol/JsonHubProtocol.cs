@@ -261,7 +261,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
             try
             {
-                var arguments = BindArguments(args, paramTypes);
+                var arguments = paramTypes == null ? BindArguments(args) : BindArguments(args, paramTypes);
                 return new InvocationMessage(invocationId, target, argumentBindingException: null, arguments: arguments).AddMetadata(metadata);
             }
             catch (Exception ex)
@@ -281,13 +281,23 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
             try
             {
-                var arguments = BindArguments(args, paramTypes);
+                var arguments = paramTypes == null ? BindArguments(args) : BindArguments(args, paramTypes);
                 return new StreamInvocationMessage(invocationId, target, argumentBindingException: null, arguments: arguments);
             }
             catch (Exception ex)
             {
                 return new StreamInvocationMessage(invocationId, target, ExceptionDispatchInfo.Capture(ex));
             }
+        }
+
+        private object[] BindArguments(JArray args)
+        {
+            var arguments = new object[args.Count];
+            for (var i = 0; i < args.Count; i++)
+            {
+                arguments[i] = args[i];
+            }
+            return arguments;
         }
 
         private object[] BindArguments(JArray args, Type[] paramTypes)
