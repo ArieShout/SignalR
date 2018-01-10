@@ -12,5 +12,7 @@ namespace Microsoft.AspNetCore.Sockets.Client.Http
         public HttpMessageHandler HttpMessageHandler { get; set; }
         public IReadOnlyCollection<KeyValuePair<string, string>> Headers { get; set; }
         public Func<string> JwtBearerTokenFactory { get; set; }
+
+        public int RecvBufferSize { get; set; } = 4096;
     }
 }

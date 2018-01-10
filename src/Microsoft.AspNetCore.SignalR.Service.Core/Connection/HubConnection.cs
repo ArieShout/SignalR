@@ -40,10 +40,11 @@ namespace Microsoft.AspNetCore.SignalR.Client
         private volatile bool _startCalled;
         private Channel<HubMessage> _output;
         private Channel<HubConnectionMessageWrapper> _requestHandlingQueue;
+        private Stats _stat;
         public Task Closed { get; }
         public Channel<HubMessage> Output => _output;
         public HubConnection(IConnection connection, IHubProtocol protocol, ILoggerFactory loggerFactory,
-            IInvocationBinder binder, Channel<HubConnectionMessageWrapper> requestHandlingQ)
+            IInvocationBinder binder, Channel<HubConnectionMessageWrapper> requestHandlingQ, Stats stat)
         {
             if (connection == null)
             {
@@ -55,6 +56,17 @@ namespace Microsoft.AspNetCore.SignalR.Client
                 throw new ArgumentNullException(nameof(protocol));
             }
 
+            if (requestHandlingQ == null)
+            {
+                throw new ArgumentNullException(nameof(requestHandlingQ));
+            }
+
+            if (stat == null)
+            {
+                throw new ArgumentNullException(nameof(stat));
+            }
+
+            _stat = stat;
             _connection = connection;
             _binder = binder ?? new HubBinder(this);
             _protocol = protocol;
@@ -94,6 +106,7 @@ namespace Microsoft.AspNetCore.SignalR.Client
         public async Task SendHubMessage(HubMessage hubMessage)
         {
             var payload = _protocolReaderWriter.WriteMessage(hubMessage);
+            _stat.BytesWrite(payload.Length);
             await _connection.SendAsync(payload, default);
         }
 
@@ -135,6 +148,7 @@ namespace Microsoft.AspNetCore.SignalR.Client
                 NegotiationProtocol.WriteMessage(new NegotiationMessage(_protocol.Name), memoryStream);
                 await _connection.SendAsync(memoryStream.ToArray(), _connectionActive.Token);
             }
+
         }
 
         private IDataEncoder GetDataEncoder(TransferMode requestedTransferMode, TransferMode actualTransferMode)
@@ -361,6 +375,7 @@ namespace Microsoft.AspNetCore.SignalR.Client
         {
             if (_protocolReaderWriter.ReadMessages(data, _binder, out var messages))
             {
+                _stat.BytesRead(data.Length);
                 foreach (var message in messages)
                 {
                     switch (message)
@@ -374,6 +389,10 @@ namespace Microsoft.AspNetCore.SignalR.Client
                                 if (_requestHandlingQueue.Writer.TryWrite(request))
                                 {
                                     break;
+                                }
+                                else
+                                {
+                                    _stat.AddPendingWrite(1);
                                 }
                             }
                             break;

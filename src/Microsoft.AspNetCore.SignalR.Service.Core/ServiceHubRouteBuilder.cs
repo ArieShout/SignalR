@@ -28,9 +28,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             var authorizeAttributes = typeof(THub).GetCustomAttributes<AuthorizeAttribute>(inherit: true);
             var authorizeData = authorizeAttributes as IList<IAuthorizeData> ?? authorizeAttributes.ToList<IAuthorizeData>();
             var authHelper = _routes.ServiceProvider.GetRequiredService<SignalRServiceAuthHelper>();
-
+            var statManager = _routes.ServiceProvider.GetRequiredService<IHubStatManager<THub>>();
             _routes.MapRoute(path, c => authHelper.GetServiceEndpoint<THub>(c, authorizeData, _config));
             _hubBuilder.BuildServiceHub<THub>(_config);
+            _routes.MapRoute(path + "/stat", c => statManager.GetHubStat(c));
         }
     }
 }

@@ -20,6 +20,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.AddSingleton(typeof(HubLifetimeManager<>), typeof(DefaultServiceHubLifetimeManager<>));
             services.AddSingleton(typeof(IHubContext<>), typeof(HubContext<>));
             services.AddSingleton(typeof(ServiceHubEndPoint<>), typeof(ServiceHubEndPoint<>));
+            services.AddSingleton(typeof(IHubStatManager<>), typeof(ServiceHubStatManager<>));
             services.AddScoped(typeof(IHubActivator<>), typeof(DefaultHubActivator<>));
             services.AddSingleton(typeof(SignalRServiceAuthHelper));
 

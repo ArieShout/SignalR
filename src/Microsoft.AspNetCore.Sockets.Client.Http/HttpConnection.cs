@@ -44,6 +44,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
         private ChannelWriter<SendMessage> Output => _transportChannel.Output;
         private readonly List<ReceiveCallback> _callbacks = new List<ReceiveCallback>();
         private readonly TransportType _requestedTransportType = TransportType.All;
+        private Stats _stats;
 
         public Uri Url { get; }
 
@@ -61,24 +62,24 @@ namespace Microsoft.AspNetCore.Sockets.Client
         }
 
         public HttpConnection(Uri url, ILoggerFactory loggerFactory)
-            : this(url, TransportType.All, loggerFactory, httpOptions: null)
+            : this(url, TransportType.All, loggerFactory, httpOptions: null, stats: null)
         {
         }
 
         public HttpConnection(Uri url, TransportType transportType, ILoggerFactory loggerFactory)
-            : this(url, transportType, loggerFactory, httpOptions: null)
+            : this(url, transportType, loggerFactory, httpOptions: null, stats: null)
         {
         }
 
-        public HttpConnection(Uri url, TransportType transportType, ILoggerFactory loggerFactory, HttpOptions httpOptions)
+        public HttpConnection(Uri url, TransportType transportType, ILoggerFactory loggerFactory, HttpOptions httpOptions, Stats stats)
         {
             Url = url ?? throw new ArgumentNullException(nameof(url));
 
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = _loggerFactory.CreateLogger<HttpConnection>();
             _httpOptions = httpOptions;
-
             _requestedTransportType = transportType;
+            _stats = stats;
             if (_requestedTransportType != TransportType.WebSockets)
             {
                 _httpClient = httpOptions?.HttpMessageHandler == null ? new HttpClient() : new HttpClient(httpOptions.HttpMessageHandler);
@@ -88,7 +89,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
             _transportFactory = new DefaultTransportFactory(transportType, _loggerFactory, _httpClient, httpOptions);
         }
 
-        public HttpConnection(Uri url, ITransportFactory transportFactory, ILoggerFactory loggerFactory, HttpOptions httpOptions)
+        public HttpConnection(Uri url, ITransportFactory transportFactory, ILoggerFactory loggerFactory, HttpOptions httpOptions, Stats stats)
         {
             Url = url ?? throw new ArgumentNullException(nameof(url));
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
@@ -97,6 +98,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
             _httpClient = _httpOptions?.HttpMessageHandler == null ? new HttpClient() : new HttpClient(_httpOptions?.HttpMessageHandler);
             _httpClient.Timeout =  HttpClientTimeout;
             _transportFactory = transportFactory ?? throw new ArgumentNullException(nameof(transportFactory));
+            _stats = stats;
         }
 
         public async Task StartAsync() => await StartAsyncCore().ForceAsync();
@@ -359,6 +361,10 @@ namespace Microsoft.AspNetCore.Sockets.Client
                     if (Input.TryRead(out var buffer))
                     {
                         _logger.ScheduleReceiveEvent(_connectionId);
+                        if (_stats != null)
+                        {
+                            _stats.TCPBytesRead(buffer.Length);
+                        }
                         _ = _eventQueue.Enqueue(async () =>
                         {
                             _logger.RaiseReceiveEvent(_connectionId);
@@ -431,6 +437,10 @@ namespace Microsoft.AspNetCore.Sockets.Client
                 if (Output.TryWrite(message))
                 {
                     await sendTcs.Task;
+                    if (_stats != null)
+                    {
+                        _stats.TCPBytesWrite(data.Length);
+                    }
                     break;
                 }
             }

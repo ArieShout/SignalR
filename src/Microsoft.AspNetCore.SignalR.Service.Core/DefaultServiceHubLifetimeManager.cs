@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using System.Linq;
 using Microsoft.AspNetCore.SignalR;
 using System.Threading;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Microsoft.AspNetCore.SignalR.Service.Core
 {
@@ -150,6 +151,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         private async Task WriteAsync(HubConnectionContext connection, HubInvocationMessage hubMessage)
         {
+            /*
             while (await connection.Output.WaitToWriteAsync())
             {
                 if (connection.Output.TryWrite(hubMessage))
@@ -157,6 +159,9 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     break;
                 }
             }
+            */
+            ServiceHubConnectionContext serviceContext = (ServiceHubConnectionContext)connection;
+            await serviceContext.SendAsync(hubMessage);
         }
 
         private string GetInvocationId()

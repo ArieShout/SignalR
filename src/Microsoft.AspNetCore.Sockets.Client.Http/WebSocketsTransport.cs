@@ -23,6 +23,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
         private readonly CancellationTokenSource _receiveCts = new CancellationTokenSource();
         private readonly ILogger _logger;
         private string _connectionId;
+        private int _recvBufferSize = 4096;
 
         public Task Running { get; private set; } = Task.CompletedTask;
 
@@ -50,6 +51,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
             }
 
             _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<WebSocketsTransport>();
+            _recvBufferSize = httpOptions.RecvBufferSize;
         }
 
         public async Task StartAsync(Uri url, Channel<byte[], SendMessage> application, TransferMode requestedTransferMode, string connectionId)
@@ -98,7 +100,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
             {
                 while (!_receiveCts.Token.IsCancellationRequested)
                 {
-                    const int bufferSize = 4096;
+                    int bufferSize = _recvBufferSize;
                     var totalBytes = 0;
                     var incomingMessage = new List<ArraySegment<byte>>();
                     WebSocketReceiveResult receiveResult;

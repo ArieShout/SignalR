@@ -36,6 +36,11 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             await _hubConnection.InvokeAsync(message);
         }
 
+        public async Task SendAsync(HubMessage hubMessage)
+        {
+            await _hubConnection.SendHubMessage(hubMessage);
+        }
+
         private string GetNextInvocationId()
         {
             return _hubConnection.GetNextId();

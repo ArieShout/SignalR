@@ -9,6 +9,7 @@ using MsgPack.Serialization;
 using Newtonsoft.Json;
 using Microsoft.AspNetCore.SignalR.Internal;
 using Microsoft.AspNetCore.SignalR.Service.Core;
+using Microsoft.AspNetCore.Sockets;
 
 namespace Microsoft.AspNetCore.SignalR.Client
 {
@@ -100,6 +101,16 @@ namespace Microsoft.AspNetCore.SignalR.Client
             return hubConnectionBuilder;
         }
 
+        public static IHubConnectionBuilder WithStat(this IHubConnectionBuilder hubConnectionBuilder, Stats stat)
+        {
+            if (stat == null)
+            {
+                throw new ArgumentNullException(nameof(stat));
+            }
+            hubConnectionBuilder.AddSetting(HubConnectionBuilderDefaults.StatKey, stat);
+            return hubConnectionBuilder;
+        }
+        
         public static ILoggerFactory GetLoggerFactory(this IHubConnectionBuilder hubConnectionBuilder)
         {
             hubConnectionBuilder.TryGetSetting<ILoggerFactory>(HubConnectionBuilderDefaults.LoggerFactoryKey, out var loggerFactory);
@@ -122,6 +133,12 @@ namespace Microsoft.AspNetCore.SignalR.Client
         {
             hubConnectionBuilder.TryGetSetting<Channel<HubConnectionMessageWrapper>>(HubConnectionBuilderDefaults.RequestQueueKey, out var requestHandlingQ);
             return requestHandlingQ;
+        }
+
+        public static Stats GetServiceStat(this IHubConnectionBuilder hubConnectionBuilder)
+        {
+            hubConnectionBuilder.TryGetSetting<Stats>(HubConnectionBuilderDefaults.StatKey, out var stat);
+            return stat;
         }
     }
 }

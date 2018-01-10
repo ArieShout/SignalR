@@ -24,7 +24,7 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.SignalR.Service.Core
 {
-    public class ServiceHubEndPoint<THub> : IInvocationBinder where THub : Hub
+    public class ServiceHubEndPoint<THub> : IInvocationBinder, IHeartbeatHandler where THub : Hub
     {
         private const string OnClientConnectedMethod = "OnConnectedAsync";
         private const string OnDisconnectedAsyncMethod = "OnDisconnectedAsync";
@@ -47,8 +47,11 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         private readonly Dictionary<string, HubMethodDescriptor> _methods =
             new Dictionary<string, HubMethodDescriptor>(StringComparer.OrdinalIgnoreCase);
-
+        private const int Capacity = 64;
+        private readonly IHubStatManager<THub> _statManager;
+        private Heartbeat _heartbeat;
         public ServiceHubEndPoint(HubLifetimeManager<THub> lifetimeMgr,
+            IHubStatManager<THub> statManager,
             IOptions<ServiceHubOptions> hubOptions,
             IServiceScopeFactory serviceScopeFactory,
             IHubContext<THub> hubContext,
@@ -56,6 +59,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             ILoggerFactory loggerFactory)
         {
             _lifetimeMgr = lifetimeMgr;
+            _statManager = statManager;
             _options = hubOptions.Value;
             _serviceScopeFactory = serviceScopeFactory;
             _authHelper = authHelper;
@@ -64,12 +68,13 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             _logger = loggerFactory.CreateLogger<ServiceHubEndPoint<THub>>();
 
             _hubContext = hubContext;
+            _heartbeat = new Heartbeat(new IHeartbeatHandler[] { this }, _logger);
             DiscoverHubMethods();
         }
 
         public void UseHub(SignalRServiceConfiguration config)
         {
-            var requestHandlingQ = Channel.CreateUnbounded<HubConnectionMessageWrapper>();
+            var requestHandlingQ = Channel.CreateBounded<HubConnectionMessageWrapper>(Capacity);// Channel.CreateUnbounded<HubConnectionMessageWrapper>();
 
             async Task WriteToTransport()
             {
@@ -97,10 +102,11 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     .WithHubBinder(this)
                     .WithConsoleLogger(_options.ConsoleLogLevel) // Debug purpose
                     // Add uid to Service URL
-                    .WithUrl($"{_authHelper.GetServerUrl<THub>(config)}?uid={_options.ServerId}")
+                    .WithUrl($"{_authHelper.GetServerUrl<THub>(config)}?uid={_options.ServerId}", _options.ReceiveBufferSize)
                     .WithTransport(TransportType.WebSockets)
                     .WithJwtBearer(() => _authHelper.GetServerToken(config))
                     .WithMessageQueue(requestHandlingQ)
+                    .WithStat(_statManager.Stat())
                     .WithHubProtocol(_options.ProtocolType == ProtocolType.Binary ?
                         new MessagePackHubProtocol() : (IHubProtocol)new JsonHubProtocol())
                     .Build();
@@ -122,6 +128,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         {
             try
             {
+                _heartbeat.Start();
                 foreach (var hubConnection in _hubConnections)
                 {
                     await hubConnection.StartAsync();
@@ -236,6 +243,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             await HubOnDisconnectedAsync(hubConnContext);
             await _lifetimeMgr.OnDisconnectedAsync(hubConnContext);
             await SendMessageAsync(hubConnContext, CompletionMessage.WithResult(message.InvocationId, ""));
+            _connections.Remove(hubConnContext);
         }
 
         private async Task HandleHubCallAsync(HubConnectionMessageWrapper messageWrapper)
@@ -553,6 +561,11 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                 return Type.EmptyTypes;
             }
             return descriptor.ParameterTypes;
+        }
+
+        public void OnHeartbeat(DateTimeOffset now)
+        {
+            _statManager.Tick(now);
         }
 
         private class HubMethodDescriptor

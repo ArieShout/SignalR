@@ -9,5 +9,6 @@ namespace Microsoft.AspNetCore.SignalR.Client
         public static readonly string HubProtocolKey = "HubProtocol";
         public static readonly string HubBinderKey = "HubBinder";
         public static readonly string RequestQueueKey = "RequestQueue";
+        public static readonly string StatKey = "Stat";
     }
 }

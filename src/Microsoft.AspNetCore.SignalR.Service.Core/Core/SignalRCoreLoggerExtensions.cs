@@ -74,13 +74,26 @@ namespace Microsoft.AspNetCore.SignalR.Core.Internal
             LoggerMessage.Define(LogLevel.Debug, new EventId(20, nameof(ServiceConnectionCanceled)), "Service connection was canceled.");
 
         private static readonly Action<ILogger, Exception> _messageQueueError =
-            LoggerMessage.Define(LogLevel.Trace, new EventId(21, nameof(AbortFailed)), "Request message queue occurs error.");
+            LoggerMessage.Define(LogLevel.Trace, new EventId(21, nameof(MessageQueueError)), "Request message queue occurs error.");
+
+        private static readonly Action<ILogger, TimeSpan, DateTimeOffset, Exception> _heartbeatSlow =
+            LoggerMessage.Define<TimeSpan, DateTimeOffset>(LogLevel.Warning, new EventId(22, nameof(HeartbeatSlow)),
+                @"Heartbeat took longer than ""{interval}"" at ""{now}"".");
+
+        public static void HeartbeatSlow(this ILogger logger, TimeSpan interval, DateTimeOffset now)
+        {
+            _heartbeatSlow(logger, interval, now, null);
+        }
 
         public static void MessageQueueError(this ILogger logger, Exception exception)
         {
             _messageQueueError(logger, exception);
         }
 
+        public static void ServiceConnectionCanceled(this ILogger logger, Exception exception)
+        {
+            _serviceConnectionCanceled(logger, exception);
+        }
         public static void UsingHubProtocol(this ILogger logger, string hubProtocol)
         {
             _usingHubProtocol(logger, hubProtocol, null);
@@ -89,11 +102,6 @@ namespace Microsoft.AspNetCore.SignalR.Core.Internal
         public static void NegotiateCanceled(this ILogger logger)
         {
             _negotiateCanceled(logger, null);
-        }
-
-        public static void ServiceConnectionCanceled(this ILogger logger, Exception exception)
-        {
-            _serviceConnectionCanceled(logger, exception);
         }
 
         public static void ErrorProcessingRequest(this ILogger logger, Exception exception)
