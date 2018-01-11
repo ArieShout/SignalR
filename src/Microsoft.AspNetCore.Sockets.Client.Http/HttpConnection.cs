@@ -71,7 +71,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
         {
         }
 
-        public HttpConnection(Uri url, TransportType transportType, ILoggerFactory loggerFactory, HttpOptions httpOptions, Stats stats)
+        public HttpConnection(Uri url, TransportType transportType, ILoggerFactory loggerFactory, HttpOptions httpOptions, Stats stats = null)
         {
             Url = url ?? throw new ArgumentNullException(nameof(url));
 
@@ -89,7 +89,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
             _transportFactory = new DefaultTransportFactory(transportType, _loggerFactory, _httpClient, httpOptions);
         }
 
-        public HttpConnection(Uri url, ITransportFactory transportFactory, ILoggerFactory loggerFactory, HttpOptions httpOptions, Stats stats)
+        public HttpConnection(Uri url, ITransportFactory transportFactory, ILoggerFactory loggerFactory, HttpOptions httpOptions, Stats stats = null)
         {
             Url = url ?? throw new ArgumentNullException(nameof(url));
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
