@@ -90,6 +90,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.AspNetCore.Signal
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SignalRServiceSample", "samples\SignalRServiceSample\SignalRServiceSample.csproj", "{6B211DF1-5E64-4E27-AA19-77A8C0BD6C19}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ChatDemo", "samples\ChatDemo\ChatDemo.csproj", "{1D12C00F-C757-44B8-A2EB-C1CF262CAACC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -212,6 +214,10 @@ Global
 		{6B211DF1-5E64-4E27-AA19-77A8C0BD6C19}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B211DF1-5E64-4E27-AA19-77A8C0BD6C19}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B211DF1-5E64-4E27-AA19-77A8C0BD6C19}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D12C00F-C757-44B8-A2EB-C1CF262CAACC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D12C00F-C757-44B8-A2EB-C1CF262CAACC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D12C00F-C757-44B8-A2EB-C1CF262CAACC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D12C00F-C757-44B8-A2EB-C1CF262CAACC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -246,6 +252,7 @@ Global
 		{1A953296-E869-4DE2-A693-FD5FCDE27057} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
 		{0A0A6135-EA24-4307-95C2-CE1B7E164A5E} = {6A35B453-52EC-48AF-89CA-D4A69800F131}
 		{6B211DF1-5E64-4E27-AA19-77A8C0BD6C19} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
+		{1D12C00F-C757-44B8-A2EB-C1CF262CAACC} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7945A4E4-ACDB-4F6E-95CA-6AC6E7C2CD59}

@@ -5,7 +5,7 @@ using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace MyChat
+namespace ChatDemo
 {
     public class Program
     {

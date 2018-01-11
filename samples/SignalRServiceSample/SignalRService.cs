@@ -15,14 +15,10 @@ namespace SignalRServiceSample
 
         public async Task<MessageResult> Publish(string channel, string eventName, object data)
         {
-            if (IsChannelNameInvalid(channel))
+            var ret = ValidateChannels(new[] {channel});
+            if (ret != null)
             {
-                return MessageResult.Error(null, "Illegal channel name: ${channel}");
-            }
-
-            if (IsUnauthorized(channel, Context.User))
-            {
-                return MessageResult.Error(null, "Permission denied. Not authorized to subsribe channel: ${channel}");
+                return ret;
             }
 
             // TODO: persist event before any action
@@ -32,16 +28,10 @@ namespace SignalRServiceSample
 
         public async Task<MessageResult> Subscribe(IEnumerable<string> channels)
         {
-            var invalidChannels = channels.Where(IsChannelNameInvalid).ToArray();
-            if (invalidChannels.Any())
+            var ret = ValidateChannels(channels);
+            if (ret != null)
             {
-                return MessageResult.Error(null, $"Invalid channel names: {string.Join(';', invalidChannels)}");
-            }
-
-            var unauthorizedChannels = channels.Where(c => IsUnauthorized(c, Context.User)).ToArray();
-            if (unauthorizedChannels.Any())
-            {
-                return MessageResult.Error(null, $"Unauthorized channels: {string.Join(';', unauthorizedChannels)}");
+                return ret;
             }
 
             var tasks = channels.Select(x => Groups.AddAsync(Context.ConnectionId, x));
@@ -50,6 +40,21 @@ namespace SignalRServiceSample
         }
 
         public async Task<MessageResult> Unsubscribe(IEnumerable<string> channels)
+        {
+            var ret = ValidateChannels(channels);
+            if (ret != null)
+            {
+                return ret;
+            }
+
+            var tasks = channels.Select(x => Groups.RemoveAsync(Context.ConnectionId, x));
+            await Task.WhenAll(tasks);
+            return MessageResult.Success();
+        }
+
+        #region Private Methods
+
+        private MessageResult ValidateChannels(IEnumerable<string> channels)
         {
             var invalidChannels = channels.Where(IsChannelNameInvalid).ToArray();
             if (invalidChannels.Any())
@@ -63,12 +68,8 @@ namespace SignalRServiceSample
                 return MessageResult.Error(null, $"Unauthorized channels: {string.Join(';', unauthorizedChannels)}");
             }
 
-            var tasks = channels.Select(x => Groups.AddAsync(Context.ConnectionId, x));
-            await Task.WhenAll(tasks);
-            return MessageResult.Success();
+            return null;
         }
-
-        #region Private Methods
 
         private static bool IsChannelNameInvalid(string channel) =>
             string.IsNullOrEmpty(channel) || !ChannelNameRegex.IsMatch(channel);
