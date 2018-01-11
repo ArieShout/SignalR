@@ -1,4 +1,4 @@
-﻿namespace SignalRServiceSample
+﻿namespace Microsoft.AspNetCore.SignalR.Client
 {
     public class MessageResult
     {

@@ -1,23 +1,12 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-import { ConnectionClosed } from "./Common"
-import { IConnection } from "./IConnection"
-import { HttpConnection } from "./HttpConnection"
 import { HubConnection } from "./HubConnection"
-import { TransportType, TransferMode } from "./Transports"
-import { Subject, Observable } from "./Observable"
-import { IHubProtocol, ProtocolType, MessageType, HubMessage, CompletionMessage, ResultMessage, InvocationMessage, StreamInvocationMessage, NegotiationMessage } from "./IHubProtocol";
-import { JsonHubProtocol } from "./JsonHubProtocol";
-import { TextMessageFormat } from "./Formatters"
-import { Base64EncodedHubProtocol } from "./Base64EncodedHubProtocol"
-import { ILogger, LogLevel } from "./ILogger"
-import { ConsoleLogger, NullLogger, LoggerFactory } from "./Loggers"
 import { IHubConnectionOptions } from "./IHubConnectionOptions"
-import * as jwt from "jsonwebtoken"
 
 export { TransportType } from "./Transports"
 export { HttpConnection } from "./HttpConnection"
+export { HubConnection } from "./HubConnection"
 export { JsonHubProtocol } from "./JsonHubProtocol"
 export { LogLevel, ILogger } from "./ILogger"
 export { ConsoleLogger, NullLogger } from "./Loggers"
@@ -39,11 +28,13 @@ export class ServiceClient {
     constructor(connectionString: string, options: IServiceOptions = {}) {
         this.options = options || {};
         this.credential = this.parseConnectionString(connectionString);
+        this.connection = new HubConnection(`http://${this.credential.hostName}/signalr`, this.options);
     }
 
     private parseConnectionString(connectionString: string): IServiceCredential {
         const dict = {};
         connectionString.split(";").forEach(x => {
+            if (!x) return;
             const items = x.split("=", 2);
             dict[items[0].toLowerCase()] = items[1];
         });
@@ -57,15 +48,23 @@ export class ServiceClient {
         await this.connection.start();
     }
 
-    async subscribe(channel: string): Promise<void> {
-        await this.connection.send("subscribe", channel);
+    subscribe(channels: string[]): Promise<any> {
+        return this.connection.invoke("subscribe", channels);
     }
 
-    async unsubscribe(channel: string): Promise<void> {
-        await this.connection.send("unsubscribe", channel);
+    unsubscribe(channels: string[]): Promise<any> {
+        return this.connection.invoke("unsubscribe", channels);
     }
 
-    async publish(channel: string, event: string, data: any): Promise<void> {
-        await this.connection.send("publish", "{channel}:{event}", data);
+    publish(channel: string, event: string, data: any): Promise<any> {
+        return this.connection.invoke("publish", channel, event, data);
+    }
+
+    on(channel: string, event: string, handler: (data: any) => void) {
+        this.connection.on(`${channel}:${event}`, handler);
+    }
+
+    off(channel: string, event: string, handler: (data: any) => void) {
+        this.connection.off(`${channel}:${event}`, handler);
     }
 }

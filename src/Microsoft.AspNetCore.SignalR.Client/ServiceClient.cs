@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 using Microsoft.AspNetCore.Sockets;
@@ -47,19 +48,29 @@ namespace Microsoft.AspNetCore.SignalR.Client
             await _connection.StopAsync();
         }
 
-        public async Task SubscribeAsync(string channelName)
+        public async Task<MessageResult> SubscribeAsync(string channel)
         {
-            await _connection.SendAsync("subscribe", channelName);
+            return await SubscribeAsync(new[] {channel});
         }
 
-        public async Task UnsubscribeAsync(string channelName)
+        public async Task<MessageResult> SubscribeAsync(IEnumerable<string> channels)
         {
-            await _connection.SendAsync("unsubscribe", channelName);
+            return await _connection.InvokeAsync<MessageResult>("subscribe", channels);
         }
 
-        public async Task PublishAsync(string channelName, string eventName, object data)
+        public async Task<MessageResult> UnsubscribeAsync(string channel)
         {
-            await _connection.SendAsync("publish", $"{channelName}:{eventName}", data);
+            return await UnsubscribeAsync(new[] {channel});
+        }
+
+        public async Task<MessageResult> UnsubscribeAsync(IEnumerable<string> channels)
+        {
+            return await _connection.InvokeAsync<MessageResult>("unsubscribe", channels);
+        }
+
+        public async Task<MessageResult> PublishAsync(string channelName, string eventName, object data)
+        {
+            return await _connection.InvokeAsync<MessageResult>("publish", channelName, eventName, data);
         }
 
         public void On<T>(string channel, string eventName, Action<T> handler)

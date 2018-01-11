@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.SignalR;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -9,68 +11,71 @@ namespace SignalRServiceSample
     //[Authorize]
     public class SignalRService : Hub
     {
-        public async Task<MessageResult> Publish(string channelName, string eventName, byte[] data)
+        private static readonly Regex ChannelNameRegex = new Regex("^[0-9A-Za-z][0-9A-Za-z-_+/]{0,63}$");
+
+        public async Task<MessageResult> Publish(string channel, string eventName, object data)
         {
-            if (!IsValidGroupName(channelName))
+            if (IsChannelNameInvalid(channel))
             {
-                return MessageResult.Error(null, "Illegal channel name: ${channelName}");
+                return MessageResult.Error(null, "Illegal channel name: ${channel}");
             }
 
-            if (!IsAuthorized(channelName, Context.User))
+            if (IsUnauthorized(channel, Context.User))
             {
-                return MessageResult.Error(null, "Permission denied. Not authorized to subsribe channel: ${channelName}");
+                return MessageResult.Error(null, "Permission denied. Not authorized to subsribe channel: ${channel}");
             }
 
-            await Clients.Group(channelName).InvokeAsync(eventName, data);
+            // TODO: persist event before any action
+            await Clients.Group(channel).InvokeAsync($"{channel}:{eventName}", data);
             return MessageResult.Success();
         }
 
-        public async Task<MessageResult> Subscribe(string channelName)
+        public async Task<MessageResult> Subscribe(IEnumerable<string> channels)
         {
-            if (!IsValidGroupName(channelName))
+            var invalidChannels = channels.Where(IsChannelNameInvalid).ToArray();
+            if (invalidChannels.Any())
             {
-                return MessageResult.Error(null, "Illegal channel name: ${channelName}");
+                return MessageResult.Error(null, $"Invalid channel names: {string.Join(';', invalidChannels)}");
             }
 
-            if (!IsAuthorized(channelName, Context.User))
+            var unauthorizedChannels = channels.Where(c => IsUnauthorized(c, Context.User)).ToArray();
+            if (unauthorizedChannels.Any())
             {
-                return MessageResult.Error(null, "Permission denied. Not authorized to subsribe channel: ${channelName}");
+                return MessageResult.Error(null, $"Unauthorized channels: {string.Join(';', unauthorizedChannels)}");
             }
 
-            await Groups.AddAsync(Context.ConnectionId, channelName);
+            var tasks = channels.Select(x => Groups.AddAsync(Context.ConnectionId, x));
+            await Task.WhenAll(tasks);
             return MessageResult.Success();
         }
 
-        public async Task<MessageResult> SubscribeMultiple(IEnumerable<string> channelName)
+        public async Task<MessageResult> Unsubscribe(IEnumerable<string> channels)
         {
-            await Task.CompletedTask;
-            return MessageResult.Success();
-        }
-
-        public async Task<MessageResult> Unsubscribe(string channelName)
-        {
-            if (!IsValidGroupName(channelName))
+            var invalidChannels = channels.Where(IsChannelNameInvalid).ToArray();
+            if (invalidChannels.Any())
             {
-                return MessageResult.Error(null, "Illegal channel name: ${channelName}");
+                return MessageResult.Error(null, $"Invalid channel names: {string.Join(';', invalidChannels)}");
             }
 
-            await Groups.RemoveAsync(Context.ConnectionId, channelName);
-            return MessageResult.Success();
-        }
+            var unauthorizedChannels = channels.Where(c => IsUnauthorized(c, Context.User)).ToArray();
+            if (unauthorizedChannels.Any())
+            {
+                return MessageResult.Error(null, $"Unauthorized channels: {string.Join(';', unauthorizedChannels)}");
+            }
 
-        public async Task<MessageResult> UnsubscribeMultiple(IEnumerable<string> channelName)
-        {
-            await Task.CompletedTask;
+            var tasks = channels.Select(x => Groups.AddAsync(Context.ConnectionId, x));
+            await Task.WhenAll(tasks);
             return MessageResult.Success();
         }
 
         #region Private Methods
 
-        private static bool IsValidGroupName(string channelName) => !string.IsNullOrEmpty(channelName);
+        private static bool IsChannelNameInvalid(string channel) =>
+            string.IsNullOrEmpty(channel) || !ChannelNameRegex.IsMatch(channel);
 
-        private static bool IsAuthorized(string channelName, ClaimsPrincipal user)
+        private static bool IsUnauthorized(string channelName, ClaimsPrincipal user)
         {
-            return true;
+            return false;
         }
 
         #endregion
