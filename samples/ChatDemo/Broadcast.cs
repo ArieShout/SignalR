@@ -8,14 +8,14 @@ namespace ChatDemo
 {
     public class Broadcast : IDisposable
     {
-        private readonly string _connectionString;
+        private readonly ServiceCredential _credential;
         private readonly Timer _timer;
         private readonly ServiceClient _client;
 
-        public Broadcast(string connectionString)
+        public Broadcast(ServiceCredential credential)
         {
-            _connectionString = connectionString;
-            _client = InitServiceClient(connectionString).Result;
+            _credential = credential;
+            _client = InitServiceClient(credential).Result;
             _timer = new Timer(Run, this, 5 * 1000, 30 * 1000);
         }
 
@@ -24,9 +24,9 @@ namespace ChatDemo
             _timer?.Dispose();
         }
 
-        private async Task<ServiceClient> InitServiceClient(string connectionString)
+        private async Task<ServiceClient> InitServiceClient(ServiceCredential credential)
         {
-            var client = new ServiceClient(connectionString);
+            var client = new ServiceClient(credential);
             await client.StartAsync();
             await client.SubscribeAsync("group-chat");
             return client;

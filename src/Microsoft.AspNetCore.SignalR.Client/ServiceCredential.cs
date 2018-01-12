@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using static Microsoft.AspNetCore.SignalR.Client.Channel;
 
 namespace Microsoft.AspNetCore.SignalR.Client
 {
@@ -16,9 +17,35 @@ namespace Microsoft.AspNetCore.SignalR.Client
 
         public string AccessKey { get; private set; }
 
+        // TODO: HTTPS
         public string ServiceUrl => string.IsNullOrEmpty(HostName) ? string.Empty : $"http://{HostName}/signalr";
 
-        public string GenerateJwtBearer(IEnumerable<Claim> claims = null, DateTime? expires = null)
+        public string GenerateJwtBearer(string channel, AccessPermission permission = AccessPermission.Publish | AccessPermission.Subscribe, DateTime? expires = null)
+        {
+            return GenerateJwtBearer(new Channel
+            {
+                Name = channel,
+                Permission = permission
+            });
+        }
+
+        public string GenerateJwtBearer(Channel channel, DateTime? expires = null)
+        {
+
+            return GenerateJwtBearer(new[] {channel}, expires);
+        }
+
+        public string GenerateJwtBearer(IEnumerable<Channel> channels, DateTime? expires = null)
+        {
+            if (channels.GroupBy(c => c.Name).Any(g => g.Count() > 1))
+            {
+                throw new ArgumentException("Duplicate channels.");
+            }
+
+            return GenerateJwtBearer(channels.Select(c => new Claim("scope", c.ToString())), expires);
+        }
+
+        private string GenerateJwtBearer(IEnumerable<Claim> claims = null, DateTime? expires = null)
         {
             SigningCredentials credentials = null;
             if (!string.IsNullOrEmpty(AccessKey))
@@ -32,7 +59,9 @@ namespace Microsoft.AspNetCore.SignalR.Client
                 claims: claims,
                 expires: expires ?? DateTime.UtcNow.AddSeconds(60),
                 signingCredentials: credentials);
-            return JwtTokenHandler.WriteToken(token);
+            var tokenString = JwtTokenHandler.WriteToken(token);
+            Console.WriteLine($"JWT = {tokenString}");
+            return tokenString;
         }
 
         public static bool TryParse(string connectionString, out ServiceCredential credential)

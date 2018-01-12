@@ -14,27 +14,37 @@ namespace Microsoft.AspNetCore.SignalR.Client
             Binary = 1
         }
 
-        private readonly ServiceCredential _credential;
-        private readonly TransportType _transport;
-        private readonly HubConnection _connection;
+        private ServiceCredential _credential;
+        private TransportType _transport;
+        private HubConnection _connection;
 
         public ServiceClient(string connectionString, TransportType transport = TransportType.WebSockets,
             ProtocolType protocol = ProtocolType.Text)
         {
-            if (!ServiceCredential.TryParse(connectionString, out _credential))
+            if (!ServiceCredential.TryParse(connectionString, out var credential))
             {
                 throw new ArgumentException($"Invalid connection string: {connectionString}");
             }
+            Init(credential, transport, protocol);
+        }
 
+        public ServiceClient(ServiceCredential credential, TransportType transport = TransportType.WebSockets,
+            ProtocolType protocol = ProtocolType.Text)
+        {
+            Init(credential, transport, protocol);
+        }
+
+        private void Init(ServiceCredential credential, TransportType transport, ProtocolType protocol)
+        {
+            _credential = credential;
             _transport = transport;
-
             _connection = new HubConnectionBuilder()
                 .WithUrl(_credential.ServiceUrl)
                 .WithTransport(_transport)
                 .WithHubProtocol(protocol == ProtocolType.Text
                     ? new JsonHubProtocol()
                     : (IHubProtocol) new MessagePackHubProtocol())
-                .WithJwtBearer(() => _credential.GenerateJwtBearer())
+                .WithJwtBearer(() => _credential.GenerateJwtBearer("*"))
                 .Build();
         }
 

@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -39,8 +40,8 @@ namespace SignalRServiceSample
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSignalR();
-            //services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            //    .AddJwtBearer(ConfigureJwtBearerOptions);
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(ConfigureJwtBearerOptions);
 
             //var redisConnStr = $"{Configuration["Redis:ConnectionString"]}";
             //if (!string.IsNullOrEmpty(redisConnStr))
@@ -71,11 +72,15 @@ namespace SignalRServiceSample
             options.TokenValidationParameters.LifetimeValidator =
                 (before, expires, token, parameters) => expires > DateTime.UtcNow;
 
+            options.TokenValidationParameters.ValidateIssuer = false;
+
+            options.TokenValidationParameters.ValidateAudience = true;
             options.TokenValidationParameters.ValidAudiences = new[]
             {
                 $"{Configuration["Auth:JWT:Audience"]}"
             };
 
+            options.TokenValidationParameters.ValidateIssuerSigningKey = true;
             options.TokenValidationParameters.IssuerSigningKeys = new[]
             {
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Auth:JWT:IssuerSigningKey"])),

@@ -56,25 +56,35 @@
             // Set initial focus to message input box.
             messageInput.focus();
 
-            // Start the connection.
-            startConnection('HostName=localhost:5001;AccessKey=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;',
-                    function(connection) {
-                        var messageCallback = function(data) {
-                            // Html encode display name and message.
-                            var encodedName = data.name;
-                            var encodedMsg = data.message;
-                            // Add the message to the page.
-                            var liElement = document.createElement('li');
-                            liElement.innerHTML = '<strong>' + encodedName + '</strong>:&nbsp;&nbsp;' + encodedMsg;
-                            var messageBox = document.getElementById('messages');
-                            messageBox.appendChild(liElement);
-                            messageBox.scrollTop = messageBox.scrollHeight;
-                        };
+            var httpClient = new signalR.DefaultHttpClient();
+            httpClient.get(`/signalr/${name}`)
+                .then(function(response) {
+                    if (response.statusCode === 200) {
+                        return startConnection(
+                            'HostName=localhost:5001;AccessKey=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;',
+                            () => response.content,
+                            function(connection) {
+                                var messageCallback = function(data) {
+                                    // Html encode display name and message.
+                                    var encodedName = data.name;
+                                    var encodedMsg = data.message;
+                                    // Add the message to the page.
+                                    var liElement = document.createElement('li');
+                                    liElement.innerHTML =
+                                        '<strong>' + encodedName + '</strong>:&nbsp;&nbsp;' + encodedMsg;
+                                    var messageBox = document.getElementById('messages');
+                                    messageBox.appendChild(liElement);
+                                    messageBox.scrollTop = messageBox.scrollHeight;
+                                };
 
-                        // Create a function that the hub can call to broadcast messages.
-                        connection.on('group-chat', 'broadcast', messageCallback);
-                        connection.on(name, 'echo', messageCallback);
-                    })
+                                // Create a function that the hub can call to broadcast messages.
+                                connection.on('group-chat', 'broadcast', messageCallback);
+                                connection.on(name, 'echo', messageCallback);
+                            });
+                    } else {
+                        return Promise.reject({ message: response.statusText });
+                    }
+                })
                 .then(function(connection) {
                     console.log('connection started');
                     return connection.subscribe(['group-chat', name])
@@ -125,10 +135,15 @@
             // the webSockets transport the function will fallback to the serverSentEvents transport and
             // if this does not work it will try longPolling. If the connection cannot be started using
             // any of the available transports the function will return a rejected Promise.
-            function startConnection(url, configureConnection) {
+            function startConnection(url, accessToken, configureConnection) {
                 return function start(transport) {
                     console.log(`Starting connection using ${signalR.TransportType[transport]} transport`);
-                    var connection = new signalR.ServiceClient(url, { transport: transport, timeoutInMilliseconds: 3600000 });
+                    var connection = new signalR.ServiceClient(url,
+                        {
+                            accessToken: accessToken,
+                            transport: transport,
+                            timeoutInMilliseconds: 3600000
+                        });
                     if (configureConnection && typeof configureConnection === 'function') {
                         configureConnection(connection);
                     }
