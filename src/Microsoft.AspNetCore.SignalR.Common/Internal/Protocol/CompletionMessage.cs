@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 {
@@ -12,7 +13,12 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         public bool HasResult { get; }
 
         public CompletionMessage(string invocationId, string error, object result, bool hasResult)
-            : base(invocationId)
+            : this(invocationId, null, error, result, hasResult)
+        {
+        }
+
+        public CompletionMessage(string invocationId, IDictionary<string, string> metadata, string error, object result, bool hasResult)
+            : base(invocationId, metadata)
         {
             if (error != null && result != null)
             {

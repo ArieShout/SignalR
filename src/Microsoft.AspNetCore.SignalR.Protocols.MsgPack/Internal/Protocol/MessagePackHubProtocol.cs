@@ -88,33 +88,35 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                 invocationId = null;
             }
 
+            var metadata = ReadMetadata(unpacker);
             var target = ReadString(unpacker, "target");
             var parameterTypes = binder.GetParameterTypes(target);
 
             try
             {
                 var arguments = BindArguments(unpacker, parameterTypes);
-                return new InvocationMessage(invocationId, target, argumentBindingException: null, arguments: arguments);
+                return new InvocationMessage(invocationId, metadata, target, arguments: arguments);
             }
             catch (Exception ex)
             {
-                return new InvocationMessage(invocationId, target, ExceptionDispatchInfo.Capture(ex));
+                return new InvocationMessage(invocationId, metadata, target, ExceptionDispatchInfo.Capture(ex));
             }
         }
 
         private static StreamInvocationMessage CreateStreamInvocationMessage(Unpacker unpacker, IInvocationBinder binder)
         {
             var invocationId = ReadInvocationId(unpacker);
+            var metadata = ReadMetadata(unpacker);
             var target = ReadString(unpacker, "target");
             var parameterTypes = binder.GetParameterTypes(target);
             try
             {
                 var arguments = BindArguments(unpacker, parameterTypes);
-                return new StreamInvocationMessage(invocationId, target, argumentBindingException: null, arguments: arguments);
+                return new StreamInvocationMessage(invocationId, metadata, target, arguments: arguments);
             }
             catch (Exception ex)
             {
-                return new StreamInvocationMessage(invocationId, target, ExceptionDispatchInfo.Capture(ex));
+                return new StreamInvocationMessage(invocationId, metadata, target, ExceptionDispatchInfo.Capture(ex));
             }
         }
 
@@ -147,14 +149,16 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private static StreamItemMessage CreateStreamItemMessage(Unpacker unpacker, IInvocationBinder binder)
         {
             var invocationId = ReadInvocationId(unpacker);
+            var metadata = ReadMetadata(unpacker);
             var itemType = binder.GetReturnType(invocationId);
             var value = DeserializeObject(unpacker, itemType, "item");
-            return new StreamItemMessage(invocationId, value);
+            return new StreamItemMessage(invocationId, value, metadata);
         }
 
         private static CompletionMessage CreateCompletionMessage(Unpacker unpacker, IInvocationBinder binder)
         {
             var invocationId = ReadInvocationId(unpacker);
+            var metadata = ReadMetadata(unpacker);
             var resultKind = ReadInt32(unpacker, "resultKind");
 
             string error = null;
@@ -178,13 +182,14 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                     throw new FormatException("Invalid invocation result kind.");
             }
 
-            return new CompletionMessage(invocationId, error, result, hasResult);
+            return new CompletionMessage(invocationId, metadata, error, result, hasResult);
         }
 
         private static CancelInvocationMessage CreateCancelInvocationMessage(Unpacker unpacker)
         {
             var invocationId = ReadInvocationId(unpacker);
-            return new CancelInvocationMessage(invocationId);
+            var metadata = ReadMetadata(unpacker);
+            return new CancelInvocationMessage(invocationId, metadata);
         }
 
         public void WriteMessage(HubMessage message, Stream output)
@@ -228,7 +233,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
         private void WriteInvocationMessage(InvocationMessage invocationMessage, Packer packer)
         {
-            packer.PackArrayHeader(4);
+            packer.PackArrayHeader(5);
             packer.Pack(HubProtocolConstants.InvocationMessageType);
             if (string.IsNullOrEmpty(invocationMessage.InvocationId))
             {
@@ -238,24 +243,27 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             {
                 packer.PackString(invocationMessage.InvocationId);
             }
+            packer.PackDictionary(invocationMessage.Metadata, SerializationContext);
             packer.PackString(invocationMessage.Target);
             packer.PackObject(invocationMessage.Arguments, SerializationContext);
         }
 
         private void WriteStreamInvocationMessage(StreamInvocationMessage streamInvocationMessage, Packer packer)
         {
-            packer.PackArrayHeader(4);
+            packer.PackArrayHeader(5);
             packer.Pack(HubProtocolConstants.StreamInvocationMessageType);
             packer.PackString(streamInvocationMessage.InvocationId);
+            packer.PackDictionary(streamInvocationMessage.Metadata, SerializationContext);
             packer.PackString(streamInvocationMessage.Target);
             packer.PackObject(streamInvocationMessage.Arguments, SerializationContext);
         }
 
         private void WriteStreamingItemMessage(StreamItemMessage streamItemMessage, Packer packer)
         {
-            packer.PackArrayHeader(3);
+            packer.PackArrayHeader(4);
             packer.Pack(HubProtocolConstants.StreamItemMessageType);
             packer.PackString(streamItemMessage.InvocationId);
+            packer.PackObject(streamItemMessage.Metadata, SerializationContext);
             packer.PackObject(streamItemMessage.Item, SerializationContext);
         }
 
@@ -266,10 +274,11 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                 completionMessage.HasResult ? NonVoidResult :
                 VoidResult;
 
-            packer.PackArrayHeader(3 + (resultKind != VoidResult ? 1 : 0));
+            packer.PackArrayHeader(4 + (resultKind != VoidResult ? 1 : 0));
 
             packer.Pack(HubProtocolConstants.CompletionMessageType);
             packer.PackString(completionMessage.InvocationId);
+            packer.PackDictionary(completionMessage.Metadata);
             packer.Pack(resultKind);
             switch (resultKind)
             {
@@ -284,9 +293,10 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
         private void WriteCancelInvocationMessage(CancelInvocationMessage cancelInvocationMessage, Packer packer)
         {
-            packer.PackArrayHeader(2);
+            packer.PackArrayHeader(3);
             packer.Pack(HubProtocolConstants.CancelInvocationMessageType);
             packer.PackString(cancelInvocationMessage.InvocationId);
+            packer.PackDictionary(cancelInvocationMessage.Metadata);
         }
 
         private void WritePingMessage(PingMessage pingMessage, Packer packer)
@@ -298,6 +308,21 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private static string ReadInvocationId(Unpacker unpacker)
         {
             return ReadString(unpacker, "invocationId");
+        }
+
+        private static IDictionary<string, string> ReadMetadata(Unpacker unpacker)
+        {
+            Exception msgPackException = null;
+            try
+            {
+                return unpacker.Unpack<IDictionary<string, string>>();
+            }
+            catch (Exception e)
+            {
+                msgPackException = e;
+            }
+
+            throw new FormatException($"Reading message metadata failed.", msgPackException);
         }
 
         private static int ReadInt32(Unpacker unpacker, string field)
