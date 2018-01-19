@@ -24,6 +24,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
         private readonly IDatabase _redisDatabase;
         private readonly ILogger _logger;
         private readonly IRoutingCache _cache;
+        private readonly string _serviceId;
         private readonly Timer _timer;
 
         private readonly object _lock = new object();
@@ -48,11 +49,12 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             new ConcurrentDictionary<string, ConcurrentDictionary<string, int>>();
 
         // TODO: inject dependency of config provider, so that we can change routing algorithm without restarting service
-        public RedisHubConnectionRouter(ILogger<RedisHubConnectionRouter> logger, IOptions<RedisOptions2> redisOptions,
-            IRoutingCache cache)
+        public RedisHubConnectionRouter(ILogger<RedisHubConnectionRouter> logger, IRoutingCache cache,
+            IOptions<RedisOptions2> redisOptions, IOptions<SignalRServiceOptions> serviceOptions)
         {
             _logger = logger;
             _cache = cache;
+            _serviceId = serviceOptions.Value?.ServiceId ?? string.Empty;
             (_redisConnection, _redisDatabase) = ConnectToRedis(logger, redisOptions.Value);
             _timer = new Timer(Scan, this, TimeSpan.FromMilliseconds(0), TimeSpan.FromSeconds(ScanInterval));
         }
@@ -138,7 +140,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             _redisDatabase.ScriptEvaluate(
                 @"redis.call('zadd', KEYS[1], 0, KEYS[2])
                 redis.call('zadd', KEYS[3], 0, KEYS[4])",
-                new RedisKey[] {hubName, serverId, $"{hubName}:{serverId}", connectionId});
+                new RedisKey[] {$"{_serviceId}:{hubName}", serverId, $"{_serviceId}:{hubName}:{serverId}", connectionId});
         }
 
         public void OnServerDisconnected(string hubName, HubConnectionContext connection)
@@ -175,7 +177,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                     redis.call('del', KEYS[1])
                     redis.call('zrem', KEYS[3], KEYS[4])
                 end",
-                new RedisKey[] { $"{hubName}:{serverId}", connectionId, hubName, serverId});
+                new RedisKey[] { $"{_serviceId}:{hubName}:{serverId}", connectionId, $"{_serviceId}:{hubName}", serverId});
         }
 
         #endregion
@@ -255,7 +257,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                 if redis.call('zscore', KEYS[3], KEYS[4]) ~= nil then
                     redis.call('zincrby', KEYS[3], ARGV[1], KEYS[4])
                 end",
-                new RedisKey[] { hubName, serverId, $"{hubName}:{serverId}", connectionId },
+                new RedisKey[] { $"{_serviceId}:{hubName}", serverId, $"{_serviceId}:{hubName}:{serverId}", connectionId },
                 new RedisValue[] { value });
         }
 
@@ -319,7 +321,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                         table.insert(ret, target_conn)
                         table.insert(ret, target_server[1])
                     end
-                    return ret", new RedisKey[] { hubName });
+                    return ret", new RedisKey[] { $"{_serviceId}:{hubName}" });
             }
             else
             {
@@ -336,7 +338,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                         table.insert(ret, target_conn)
                         table.insert(ret, target_server[1])
                     end
-                    return ret", new RedisKey[] { $"{hubName}:{serverId}", hubName });
+                    return ret", new RedisKey[] { $"{_serviceId}:{hubName}:{serverId}", $"{_serviceId}:{hubName}" });
             }
             return results.Any()
                     ? new RouteTarget
@@ -397,7 +399,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                     end
                     return ret
                     ",
-                    new RedisKey[] {hubName},
+                    new RedisKey[] {$"{_serviceId}:{hubName}"},
                     serverStatus.Select(s => (RedisValue) s.Key).ToArray());
 
                 var dict = ConvertResultToDict(results);
