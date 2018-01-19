@@ -19,6 +19,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
         public Func<IEnumerable<string>> SigningKeyProvider { get; set; } = null;
 
         public bool EnableStickySession { get; set; } = false;
+
+        public string ServiceId = Guid.NewGuid().ToString();
     }
 
     internal class ConfigureSignalRServiceOptions : IConfigureNamedOptions<JwtBearerOptions>

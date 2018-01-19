@@ -48,6 +48,7 @@ namespace SignalRServiceSample
                         Configuration["Auth:JWT:IssuerSigningKey2"]
                     };
                     options.EnableStickySession = bool.TryParse(Configuration["EnableStickySession"], out var value) && value;
+                    options.ServiceId = Configuration["ServiceId"];
                 });
 
             var redisConnStr = $"{Configuration["Redis:ConnectionString"]}";
