@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27110.0
+VisualStudioVersion = 15.0.27004.2009
 MinimumVisualStudioVersion = 15.0.26730.03
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{DA69F624-5398-4884-87E4-B816698CDE65}"
 	ProjectSection(SolutionItems) = preProject
@@ -97,6 +97,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.AspNetCore.SignalR.Service", "src\Microsoft.AspNetCore.SignalR.Service\Microsoft.AspNetCore.SignalR.Service.csproj", "{1A12F5E6-76F4-43D3-BD22-A00841C7D6D2}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.AspNetCore.SignalR.Service.Server", "src\Microsoft.AspNetCore.SignalR.Service.Server\Microsoft.AspNetCore.SignalR.Service.Server.csproj", "{C35FD291-D04D-417A-8AFA-4315A5D4E085}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceSample", "samples\ServiceSample\ServiceSample.csproj", "{C5266EEB-47E9-4282-9FC8-5D614B3E0CFF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -236,6 +238,10 @@ Global
 		{C35FD291-D04D-417A-8AFA-4315A5D4E085}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C35FD291-D04D-417A-8AFA-4315A5D4E085}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C35FD291-D04D-417A-8AFA-4315A5D4E085}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5266EEB-47E9-4282-9FC8-5D614B3E0CFF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5266EEB-47E9-4282-9FC8-5D614B3E0CFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5266EEB-47E9-4282-9FC8-5D614B3E0CFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5266EEB-47E9-4282-9FC8-5D614B3E0CFF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -274,6 +280,7 @@ Global
 		{4DBF918E-BD37-4309-B448-BA68C935944D} = {DA69F624-5398-4884-87E4-B816698CDE65}
 		{1A12F5E6-76F4-43D3-BD22-A00841C7D6D2} = {DA69F624-5398-4884-87E4-B816698CDE65}
 		{C35FD291-D04D-417A-8AFA-4315A5D4E085} = {DA69F624-5398-4884-87E4-B816698CDE65}
+		{C5266EEB-47E9-4282-9FC8-5D614B3E0CFF} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7945A4E4-ACDB-4F6E-95CA-6AC6E7C2CD59}
