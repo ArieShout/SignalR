@@ -36,11 +36,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             {
                 ReadTotalSize = _stat.ReadDataSize,
                 WriteTotalSize = _stat.WriteDataSize,
-                TCPReadSize = _stat.TCPReadSize,
-                TCPWriteSize = _stat.TCPWriteSize,
                 ReadRate = readRate,
-                WriteRate = writeRate,
-                PendingWrite = _stat.PendingWrite
+                WriteRate = writeRate
             }));
         }
 

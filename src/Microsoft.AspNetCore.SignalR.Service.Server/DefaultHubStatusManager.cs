@@ -7,6 +7,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
+using Microsoft.AspNetCore.Sockets;
+using System.Threading;
 
 namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
@@ -17,6 +19,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         private readonly ConcurrentDictionary<string, int> _clientMessages = new ConcurrentDictionary<string, int>();
         private readonly ConcurrentDictionary<string, int> _serverMessages = new ConcurrentDictionary<string, int>();
+
+        private Stats _stat = new Stats();
+        private Stats _clientStat = new Stats();
+        private Stats _serverStat = new Stats();
 
         public async Task AddClientConnection(string hubName)
         {
@@ -69,15 +75,43 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                 MessageCount = serverStats.Sum(x => x.MessageCount)
             };
 
+            int worker = 0;
+            int io = 0;
+            ThreadPool.GetAvailableThreads(out worker, out io);
+
             return context.Response.WriteAsync(JsonConvert.SerializeObject(new
             {
+                ConnectionId = context.Connection.Id,
                 overall = new
                 {
                     client = clientOverall,
                     server = serverOverall
                 },
+                AvailableWorker = worker,
+                AvailableIO = io,
                 client = clientStats,
-                server = serverStats
+                server = serverStats,
+                clientWrite2Channel = _clientStat.Write2Channel,
+                ClientReadFromChannel = _clientStat.ReadFromChannel,
+                ServerWrite2Channel = _serverStat.Write2Channel,
+                ServerReadFromChannel = _serverStat.ReadFromChannel,
+                Send2ClientReq = _stat.ServiceSend2ClientReq,
+                RecvFromClientReq = _stat.ServiceRecvFromClientReq,
+                Send2ServerReq = _stat.ServiceSend2ServerReq,
+                RecvFromServerReq = _stat.ServiceRecvFromServerReq,
+                ServicePendingWrite = _stat.ServicePendingWrite,
+                ServerLastReadData = _serverStat.LastReadDataSize,
+                ServerLastWriteData = _serverStat.LastWriteDataSize,
+                ServerTotalReadData = _serverStat.ReadDataSize,
+                ServerTotalWriteData = _serverStat.WriteDataSize,
+                ServerReadRate = _serverStat.ReadRate,
+                ServerWriteRate = _serverStat.WriteRate,
+                ClientLastReadData = _clientStat.LastReadDataSize,
+                ClientLastWriteData = _clientStat.LastWriteDataSize,
+                ClientTotalReadData = _clientStat.ReadDataSize,
+                ClientTotalWriteData = _clientStat.WriteDataSize,
+                ClientReadRate = _clientStat.ReadRate,
+                ClientWriteRate = _clientStat.WriteRate
             }));
         }
 
@@ -90,6 +124,41 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                 ConnectionCount = kvp.Value,
                 MessageCount = messageStat.TryGetValue(kvp.Key, out var count) ? count : 0
             };
+        }
+
+        public void AddServicePendingWrite(long count)
+        {
+            _stat.AddServicePendingWrite(count);
+        }
+
+        public void AddSend2ClientReq(long count)
+        {
+            _stat.AddServiceSend2ClientReq(count);
+        }
+
+        public void AddRecvFromClientReq(long count)
+        {
+            _stat.AddServiceRecvFromClientReq(count);
+        }
+
+        public void AddSend2ServerReq(long count)
+        {
+            _stat.AddServiceSend2ServerReq(count);
+        }
+
+        public void AddRecvFromServerReq(long count)
+        {
+            _stat.AddServiceRecvFromServerReq(count);
+        }
+
+        public Stats GetGlobalStat4Client()
+        {
+            return _clientStat;
+        }
+
+        public Stats GetGlobalStat4Server()
+        {
+            return _serverStat;
         }
     }
 

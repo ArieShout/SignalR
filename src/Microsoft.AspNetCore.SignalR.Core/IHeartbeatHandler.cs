@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Microsoft.AspNetCore.SignalR.Service.Core
+namespace Microsoft.AspNetCore.SignalR
 {
     public interface IHeartbeatHandler
     {

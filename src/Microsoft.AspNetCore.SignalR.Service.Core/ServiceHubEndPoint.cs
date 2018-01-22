@@ -47,7 +47,6 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         private readonly Dictionary<string, HubMethodDescriptor> _methods =
             new Dictionary<string, HubMethodDescriptor>(StringComparer.OrdinalIgnoreCase);
-        private const int Capacity = 64;
         private readonly IHubStatManager<THub> _statManager;
         private Heartbeat _heartbeat;
         public ServiceHubEndPoint(HubLifetimeManager<THub> lifetimeMgr,
@@ -74,7 +73,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         public void UseHub(SignalRServiceConfiguration config)
         {
-            var requestHandlingQ = Channel.CreateBounded<HubConnectionMessageWrapper>(Capacity);// Channel.CreateUnbounded<HubConnectionMessageWrapper>();
+            var requestHandlingQ = Channel.CreateUnbounded<HubConnectionMessageWrapper>();
 
             async Task WriteToTransport()
             {

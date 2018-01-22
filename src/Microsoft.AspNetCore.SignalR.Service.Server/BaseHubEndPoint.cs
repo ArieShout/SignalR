@@ -20,7 +20,7 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
-    public abstract class BaseHubEndPoint<THub> : HubEndPoint<THub> where THub : Hub
+    public abstract class BaseHubEndPoint<THub> : HubEndPoint<THub>, IHeartbeatHandler where THub : Hub
     {
         private static readonly Base64Encoder Base64Encoder = new Base64Encoder();
         private static readonly PassThroughEncoder PassThroughEncoder = new PassThroughEncoder();
@@ -29,21 +29,83 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
         private readonly IHubProtocolResolver _protocolResolver;
         private readonly HubOptions _hubOptions;
         private readonly IUserIdProvider _userIdProvider;
-
+        private IHubStatusManager _hubStatusManager;
+        private object _lock = new object();
         protected BaseHubEndPoint(HubLifetimeManager<THub> lifetimeManager,
                            IHubProtocolResolver protocolResolver,
                            IHubContext<THub> hubContext,
                            IOptions<HubOptions> hubOptions,
                            ILogger<BaseHubEndPoint<THub>> logger,
                            IServiceScopeFactory serviceScopeFactory,
-                           IUserIdProvider userIdProvider) : base(lifetimeManager, protocolResolver, hubContext, hubOptions, logger, serviceScopeFactory, userIdProvider)
+                           IUserIdProvider userIdProvider,
+                           IHubStatusManager hubStatusManager) : base(lifetimeManager, protocolResolver, hubContext, hubOptions, logger, serviceScopeFactory, userIdProvider)
         {
             _protocolResolver = protocolResolver;
             _hubOptions = hubOptions.Value;
             _logger = logger;
             _userIdProvider = userIdProvider;
+            _hubStatusManager = hubStatusManager;
+        }
+        private class MonitoredChannelWriter<TWrite> : ChannelWriter<TWrite>
+        {
+            Stats _stats;
+            ChannelWriter<TWrite> _writer;
+            public MonitoredChannelWriter(ChannelWriter<TWrite> writer, Stats stats)
+            {
+                _writer = writer;
+                _stats = stats;
+            }
+            public override bool TryWrite(TWrite item)
+            {
+                if (_writer.TryWrite(item))
+                {
+                    _stats.AddWrite2Channel(1);
+                    return true;
+                }
+                return false;
+            }
+
+            public override Task<bool> WaitToWriteAsync(CancellationToken cancellationToken = default)
+            {
+                return _writer.WaitToWriteAsync(cancellationToken);
+            }
         }
 
+        private class MonitoredChannelReader<TRead> : ChannelReader<TRead>
+        {
+            Stats _stats;
+            ChannelReader<TRead> _reader;
+            public MonitoredChannelReader(ChannelReader<TRead> reader, Stats stats)
+            {
+                _reader = reader;
+                _stats = stats;
+            }
+
+            public override bool TryRead(out TRead item)
+            {
+                if (_reader.TryRead(out item))
+                {
+                    _stats.AddReadFromChannel(1);
+                    return true;
+                }
+                return false;
+            }
+
+            public override Task<bool> WaitToReadAsync(CancellationToken cancellationToken = default)
+            {
+                return _reader.WaitToReadAsync(cancellationToken);
+            }
+        }
+        public class MonitoredChannel<T> : Channel<T>
+        {
+            private Channel<T> _channel;
+            public MonitoredChannel(Channel<T> channel, Stats stat)
+            {
+                _channel = channel;
+                Reader = new MonitoredChannelReader<T>(_channel.Reader, stat);
+                Writer = new MonitoredChannelWriter<T>(_channel.Writer, stat);
+            }
+        }
         public override async Task OnConnectedAsync(ConnectionContext connection)
         {
             var output = Channel.CreateUnbounded<HubMessage>();
@@ -77,6 +139,23 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                             {
                                 if (connection.Transport.Writer.TryWrite(buffer))
                                 {
+                                    // Add statistics
+                                    if (typeof(THub).Equals(typeof(ClientHub)))
+                                    {
+                                        _hubStatusManager.AddSend2ClientReq(1);
+                                        if (_hubOptions.MarkTimestampInCritialPhase)
+                                        {
+                                            ServiceMetrics.MarkSendMsgToClientStage(((HubInvocationMessage)hubMessage).Metadata);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        _hubStatusManager.AddSend2ServerReq(1);
+                                        if (_hubOptions.MarkTimestampInCritialPhase)
+                                        {
+                                            ServiceMetrics.MarkSendMsgToServerStage(((HubInvocationMessage)hubMessage).Metadata);
+                                        }
+                                    }
                                     break;
                                 }
                             }
@@ -110,6 +189,25 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             }
         }
 
+        public void OnHeartbeat(DateTimeOffset now)
+        {
+            lock (_lock)
+            {
+                Stats stat;
+                if (typeof(THub).Equals(typeof(ClientHub)))
+                {
+                    stat = _hubStatusManager.GetGlobalStat4Client();
+                }
+                else
+                {
+                    stat = _hubStatusManager.GetGlobalStat4Server();
+                }
+                stat.ReportReadRate(stat.ReadDataSize - stat.LastReadDataSize);
+                stat.ReportWriteRate(stat.WriteDataSize - stat.LastWriteDataSize);
+                stat.ReportLastReadDataSize(stat.ReadDataSize);
+                stat.ReportLastWriteDataSize(stat.WriteDataSize);
+            }
+        }
         #region Private Methods
 
         private static string GetHubName(HubConnectionContext connection) =>
@@ -203,15 +301,22 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                 while (await connection.Input.WaitToReadAsync(connection.ConnectionAbortedToken))
                 {
                     while (connection.Input.TryRead(out var buffer))
-                    {
+                    {   
                         if (!connection.ProtocolReaderWriter.ReadMessages(buffer, this, out var hubMessages)) continue;
                         foreach (var hubMessage in hubMessages)
                         {
+                            if (typeof(THub).Equals(typeof(ClientHub)))
+                            {
+                                _hubStatusManager.AddRecvFromClientReq(1);
+                            }
                             switch (hubMessage)
                             {
                                 case InvocationMessage invocationMessage:
                                     _logger.ReceivedHubInvocation(invocationMessage);
-
+                                    if (typeof(THub).Equals(typeof(ClientHub)) && _hubOptions.MarkTimestampInCritialPhase)
+                                    {
+                                        ServiceMetrics.MarkReceiveMsgFromClientStage(invocationMessage.Metadata);
+                                    }
                                     // Don't wait on the result of execution, continue processing other
                                     // incoming messages on this connection.
                                     _ = ProcessInvocation(hubName, connection, invocationMessage, isStreamedInvocation: false);
@@ -227,7 +332,12 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
                                 case CompletionMessage completionMessage:
                                     _logger.ReceivedCompletion(completionMessage);
-
+                                    // Add statistics for messages from server
+                                    _hubStatusManager.AddRecvFromServerReq(1);
+                                    if (typeof(THub).Equals(typeof(ServerHub)) && _hubOptions.MarkTimestampInCritialPhase)
+                                    {
+                                        ServiceMetrics.MarkReceiveMsgFromServerStage(completionMessage.Metadata);
+                                    }
                                     _ = ProcessCompletion(hubName, connection, completionMessage);
                                     break;
 

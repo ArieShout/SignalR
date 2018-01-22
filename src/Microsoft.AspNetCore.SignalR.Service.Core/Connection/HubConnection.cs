@@ -106,7 +106,6 @@ namespace Microsoft.AspNetCore.SignalR.Client
         public async Task SendHubMessage(HubMessage hubMessage)
         {
             var payload = _protocolReaderWriter.WriteMessage(hubMessage);
-            _stat.BytesWrite(payload.Length);
             await _connection.SendAsync(payload, default);
         }
 
@@ -375,7 +374,6 @@ namespace Microsoft.AspNetCore.SignalR.Client
         {
             if (_protocolReaderWriter.ReadMessages(data, _binder, out var messages))
             {
-                _stat.BytesRead(data.Length);
                 foreach (var message in messages)
                 {
                     switch (message)
@@ -389,10 +387,6 @@ namespace Microsoft.AspNetCore.SignalR.Client
                                 if (_requestHandlingQueue.Writer.TryWrite(request))
                                 {
                                     break;
-                                }
-                                else
-                                {
-                                    _stat.AddPendingWrite(1);
                                 }
                             }
                             break;

@@ -48,6 +48,11 @@ namespace SignalRServiceSample
                         Configuration["Auth:JWT:IssuerSigningKey2"]
                     };
                     options.EnableStickySession = bool.TryParse(Configuration["EnableStickySession"], out var value) && value;
+                },
+                options =>
+                {
+                    options.MarkTimestampInCritialPhase = Configuration["Diagnostic:EnableMetrics"] != null ?
+                        bool.TryParse(Configuration["Diagnostic:EnableMetrics"], out var value) && value : false;
                 });
 
             var redisConnStr = $"{Configuration["Redis:ConnectionString"]}";

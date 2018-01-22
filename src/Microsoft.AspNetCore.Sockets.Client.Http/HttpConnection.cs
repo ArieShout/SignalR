@@ -363,7 +363,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
                         _logger.ScheduleReceiveEvent(_connectionId);
                         if (_stats != null)
                         {
-                            _stats.TCPBytesRead(buffer.Length);
+                            _stats.BytesRead(buffer.Length);
                         }
                         _ = _eventQueue.Enqueue(async () =>
                         {
@@ -439,7 +439,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
                     await sendTcs.Task;
                     if (_stats != null)
                     {
-                        _stats.TCPBytesWrite(data.Length);
+                        _stats.BytesWrite(data.Length);
                     }
                     break;
                 }

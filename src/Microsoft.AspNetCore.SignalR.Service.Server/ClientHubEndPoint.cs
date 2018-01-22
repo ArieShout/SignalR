@@ -25,7 +25,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                            IServiceScopeFactory serviceScopeFactory,
                            IUserIdProvider userIdProvider,
                            IHubMessageBroker hubMessageBroker,
-                           IHubStatusManager hubStatusManager) : base(lifetimeManager, protocolResolver, hubContext, hubOptions, logger, serviceScopeFactory, userIdProvider)
+                           IHubStatusManager hubStatusManager) : base(lifetimeManager, protocolResolver, hubContext, hubOptions, logger, serviceScopeFactory, userIdProvider, hubStatusManager)
         {
             _hubMessageBroker = hubMessageBroker;
             _hubStatusManager = hubStatusManager;

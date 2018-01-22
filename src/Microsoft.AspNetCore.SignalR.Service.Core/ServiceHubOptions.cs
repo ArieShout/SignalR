@@ -22,6 +22,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         public int ReceiveBufferSize { get; set; } = 4096;
 
+        public bool MarkTimestampInCritialPhase { get; set; } = false;
         // TODO: selectively pass claims to SignalR service
         public Func<HttpContext, IEnumerable<Claim>> ClaimProvider { get; set; } =
             context => context.User.Claims;

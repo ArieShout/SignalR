@@ -3,7 +3,7 @@
 
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-
+using Microsoft.AspNetCore.Sockets;
 namespace Microsoft.AspNetCore.SignalR.Service.Server
 {
     public interface IHubStatusManager
@@ -21,5 +21,19 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
         Task AddServerMessage(string hubName);
 
         Task GetHubStatus(HttpContext context);
+
+        void AddServicePendingWrite(long count);
+
+        void AddSend2ClientReq(long count);
+
+        void AddRecvFromClientReq(long count);
+
+        void AddSend2ServerReq(long count);
+
+        void AddRecvFromServerReq(long count);
+
+        Stats GetGlobalStat4Client();
+
+        Stats GetGlobalStat4Server();
     }
 }

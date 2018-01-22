@@ -18,13 +18,14 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         public static ISignalRBuilder AddSignalRServiceServer(this IServiceCollection services)
         {
-            return AddSignalRServiceServer(services, _ => { });
+            return AddSignalRServiceServer(services, _ => { }, _ => { });
         }
 
-        public static ISignalRBuilder AddSignalRServiceServer(this IServiceCollection services, Action<SignalRServiceOptions> configure)
+        public static ISignalRBuilder AddSignalRServiceServer(this IServiceCollection services,
+            Action<SignalRServiceOptions> configure, Action<HubOptions> configureHub)
         {
             services.Configure(configure);
-
+            services.Configure(configureHub);
             services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureSignalRServiceOptions>();
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer();

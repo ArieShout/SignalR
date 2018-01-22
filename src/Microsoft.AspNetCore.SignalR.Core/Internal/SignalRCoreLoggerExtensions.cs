@@ -73,6 +73,14 @@ namespace Microsoft.AspNetCore.SignalR.Core.Internal
         private static readonly Action<ILogger, string, Exception> _invalidReturnValueFromStreamingMethod =
             LoggerMessage.Define<string>(LogLevel.Error, new EventId(19, nameof(InvalidReturnValueFromStreamingMethod)), "A streaming method returned a value that cannot be used to build enumerator {hubMethod}.");
 
+        private static readonly Action<ILogger, TimeSpan, DateTimeOffset, Exception> _heartbeatSlow =
+            LoggerMessage.Define<TimeSpan, DateTimeOffset>(LogLevel.Warning, new EventId(20, nameof(HeartbeatSlow)),
+                @"Heartbeat took longer than ""{interval}"" at ""{now}"".");
+
+        public static void HeartbeatSlow(this ILogger logger, TimeSpan interval, DateTimeOffset now)
+        {
+            _heartbeatSlow(logger, interval, now, null);
+        }
         public static void UsingHubProtocol(this ILogger logger, string hubProtocol)
         {
             _usingHubProtocol(logger, hubProtocol, null);

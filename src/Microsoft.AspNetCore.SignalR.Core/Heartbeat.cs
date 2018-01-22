@@ -3,7 +3,7 @@ using System;
 using System.Threading;
 using Microsoft.AspNetCore.SignalR.Core.Internal;
 
-namespace Microsoft.AspNetCore.SignalR.Service.Core
+namespace Microsoft.AspNetCore.SignalR
 {
     public class Heartbeat : IDisposable
     {
