@@ -37,7 +37,7 @@ namespace ServiceSample.Controllers
 
         // POST v1-preview/hub/chat/connections/1,2,3
         [HttpPost("{hubName}/connections/{idList}")]
-        public async Task<IActionResult> InvokeMultiConnection(string hubName, string idList,
+        public async Task<IActionResult> InvokeConnections(string hubName, string idList,
             [FromBody] MethodInvocation message)
         {
             var lifetimeManager = _messageBroker.GetHubLifetimeManager(hubName);
@@ -48,6 +48,38 @@ namespace ServiceSample.Controllers
 
             var ids = idList.Split(NameSeparator, StringSplitOptions.RemoveEmptyEntries);
             await lifetimeManager.InvokeConnectionsAsync(ids, message.Method, message.Arguments);
+
+            return Accepted();
+        }
+
+        // POST v1-preview/hub/chat/user/1
+        [HttpPost("{hubName}/user/{id}")]
+        public async Task<IActionResult> InvokeUser(string hubName, string id, [FromBody] MethodInvocation message)
+        {
+            var lifetimeManager = _messageBroker.GetHubLifetimeManager(hubName);
+            if (lifetimeManager == null)
+            {
+                return NotFound($"Hub not exist: {hubName}");
+            }
+
+            await lifetimeManager.InvokeUserAsync(id, message.Method, message.Arguments);
+
+            return Accepted();
+        }
+
+        // POST v1-preview/hub/chat/users/1,2,3
+        [HttpPost("{hubName}/users/{idList}")]
+        public async Task<IActionResult> InvokeUsers(string hubName, string idList,
+            [FromBody] MethodInvocation message)
+        {
+            var lifetimeManager = _messageBroker.GetHubLifetimeManager(hubName);
+            if (lifetimeManager == null)
+            {
+                return NotFound($"Hub not exist: {hubName}");
+            }
+
+            var ids = idList.Split(NameSeparator, StringSplitOptions.RemoveEmptyEntries);
+            await lifetimeManager.InvokeUsersAsync(ids, message.Method, message.Arguments);
 
             return Accepted();
         }

@@ -29,8 +29,8 @@ namespace ServiceSample
             {
                 options.AudienceProvider = hubName => new[]
                 {
-                    $"{Configuration["Auth:JWT:Audience"]}/client/{hubName}",
-                    $"{Configuration["Auth:JWT:Audience"]}/server/{hubName}"
+                    $"{Configuration["Auth:JWT:Audience"]}/client/?hub={hubName}",
+                    $"{Configuration["Auth:JWT:Audience"]}/server/?hub={hubName}"
                 };
                 options.SigningKeyProvider = () => new[]
                 {
