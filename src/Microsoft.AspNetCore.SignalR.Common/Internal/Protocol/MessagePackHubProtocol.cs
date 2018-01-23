@@ -251,7 +251,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                 completionMessage.HasResult ? NonVoidResult :
                 VoidResult;
 
-            packer.PackArrayHeader(3 + (resultKind != VoidResult ? 1 : 0));
+            packer.PackArrayHeader(4 + (resultKind != VoidResult ? 1 : 0));
 
             packer.Pack(HubProtocolConstants.CompletionMessageType);
             packer.PackString(completionMessage.InvocationId);
@@ -265,6 +265,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                     packer.PackObject(completionMessage.Result, _serializationContext);
                     break;
             }
+            packer.PackDictionary<string, string>(completionMessage.Metadata);
         }
 
         private void WriteCancelInvocationMessage(CancelInvocationMessage cancelInvocationMessage, Packer packer)
