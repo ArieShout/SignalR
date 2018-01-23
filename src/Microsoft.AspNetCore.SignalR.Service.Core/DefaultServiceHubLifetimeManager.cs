@@ -151,15 +151,6 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         private async Task WriteAsync(HubConnectionContext connection, HubInvocationMessage hubMessage)
         {
-            /*
-            while (await connection.Output.WaitToWriteAsync())
-            {
-                if (connection.Output.TryWrite(hubMessage))
-                {
-                    break;
-                }
-            }
-            */
             ServiceHubConnectionContext serviceContext = (ServiceHubConnectionContext)connection;
             await serviceContext.SendAsync(hubMessage);
         }

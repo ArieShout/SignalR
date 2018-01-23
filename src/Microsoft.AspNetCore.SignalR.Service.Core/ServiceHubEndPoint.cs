@@ -246,7 +246,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                 connContext.User.AddIdentity(new ClaimsIdentity(claims));
             }
             var hubConnection = _hubConnections[messageWrapper.HubConnectionIndex];
-            var hubConnContext = new ServiceHubConnectionContext(connContext, hubConnection.Output, hubConnection);
+            var hubConnContext = new ServiceHubConnectionContext(connContext, hubConnection.Output, hubConnection, _options);
 
             _connections.Add(hubConnContext);
             await _lifetimeMgr.OnConnectedAsync(hubConnContext);

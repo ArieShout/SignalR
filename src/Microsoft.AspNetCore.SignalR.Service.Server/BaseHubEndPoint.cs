@@ -31,6 +31,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
         private readonly IUserIdProvider _userIdProvider;
         private IHubStatusManager _hubStatusManager;
         private object _lock = new object();
+        private Heartbeat _heartbeat;
         protected BaseHubEndPoint(HubLifetimeManager<THub> lifetimeManager,
                            IHubProtocolResolver protocolResolver,
                            IHubContext<THub> hubContext,
@@ -45,6 +46,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             _logger = logger;
             _userIdProvider = userIdProvider;
             _hubStatusManager = hubStatusManager;
+            _heartbeat = new Heartbeat(new IHeartbeatHandler[] { this }, _logger);
+            _heartbeat.Start();
         }
         private class MonitoredChannelWriter<TWrite> : ChannelWriter<TWrite>
         {
@@ -108,8 +111,9 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
         }
         public override async Task OnConnectedAsync(ConnectionContext connection)
         {
-            var output = Channel.CreateUnbounded<HubMessage>();
-
+            var outp = Channel.CreateUnbounded<HubMessage>();
+            var output = new MonitoredChannel<HubMessage>(outp, typeof(THub).Equals(typeof(ClientHub)) ?
+                _hubStatusManager.GetGlobalStat4Client() : _hubStatusManager.GetGlobalStat4Server());
             // Set the hub feature before doing anything else. This stores
             // all the relevant state for a SignalR Hub connection.
             connection.Features.Set<IHubFeature>(new HubFeature());
@@ -291,6 +295,16 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             await OnHubDisconnectedAsync(hubName, connection, null);
         }
 
+        private async Task SendClientMsgBackDirectly(ServiceHubConnectionContext connection, HubMessage hubMessage)
+        {
+            while (await connection.Output.WaitToWriteAsync())
+            {
+                if (connection.Output.TryWrite(hubMessage))
+                {
+                    break;
+                }
+            }
+        }
         private async Task DispatchMessagesAsync(string hubName, ServiceHubConnectionContext connection)
         {
             // Since we dispatch multiple hub invocations in parallel, we need a way to communicate failure back to the main processing loop.
@@ -319,7 +333,20 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                                     }
                                     // Don't wait on the result of execution, continue processing other
                                     // incoming messages on this connection.
-                                    _ = ProcessInvocation(hubName, connection, invocationMessage, isStreamedInvocation: false);
+                                    if (!(typeof(THub).Equals(typeof(ClientHub)) && _hubOptions.EchoAll4TroubleShooting))
+                                    {
+                                        _ = ProcessInvocation(hubName, connection, invocationMessage, isStreamedInvocation: false);
+                                    }
+                                    else
+                                    {
+                                        _ = SendClientMsgBackDirectly(connection, invocationMessage);
+                                        var completionMsg = CompletionMessage.WithResult(invocationMessage.InvocationId, "");
+                                        if (_hubOptions.MarkTimestampInCritialPhase)
+                                        {
+                                            ServiceMetrics.MarkSendMsgToClientStage(completionMsg.Metadata);
+                                        }
+                                        _ = SendClientMsgBackDirectly(connection, completionMsg);
+                                    }
                                     break;
 
                                 case StreamInvocationMessage streamInvocationMessage:

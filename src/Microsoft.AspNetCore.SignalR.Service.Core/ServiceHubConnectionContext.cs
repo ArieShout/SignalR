@@ -13,13 +13,14 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
     {
         private readonly ServiceConnectionContext _connectionContext;
         private readonly HubConnection _hubConnection;
-
+        private readonly ServiceHubOptions _hubOptions;
         public ServiceHubConnectionContext(ServiceConnectionContext connectionContext,
-            ChannelWriter<HubMessage> output, HubConnection hubConnection)
+            ChannelWriter<HubMessage> output, HubConnection hubConnection, ServiceHubOptions hubOptions)
             : base(output, null)
         {
             _connectionContext = connectionContext;
             _hubConnection = hubConnection;
+            _hubOptions = hubOptions;
         }
 
         public HubConnection HubConnection => _hubConnection;
@@ -39,7 +40,20 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
         public async Task SendAsync(HubMessage hubMessage)
         {
-            await _hubConnection.SendHubMessage(hubMessage);
+            if (_hubOptions.MessagePassingType == MessagePassingType.AsyncCall)
+            {
+                await _hubConnection.SendHubMessage(hubMessage);
+            }
+            else
+            {
+                while (await Output.WaitToWriteAsync())
+                {
+                    if (Output.TryWrite(hubMessage))
+                    {
+                        break;
+                    }
+                }
+            }
         }
 
         private string GetNextInvocationId()
