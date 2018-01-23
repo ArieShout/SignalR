@@ -22,6 +22,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             _hubConnection = hubConnection;
         }
 
+        public HubConnection HubConnection => _hubConnection;
         public override string ConnectionId => _connectionContext.ConnectionId;
 
         public override ClaimsPrincipal User => _connectionContext.User;

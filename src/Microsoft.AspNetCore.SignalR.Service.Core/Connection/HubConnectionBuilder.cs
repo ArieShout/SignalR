@@ -49,6 +49,7 @@ namespace Microsoft.AspNetCore.SignalR.Client
             var hubProtocol = builder.GetHubProtocol();
             var serviceHubBinder = builder.GetServiceHubBinder();
             var requestHandlingQ = builder.GetRequestHandlingQ();
+            var stat = builder.GetServiceStat();
             var enableMetrics = builder.isMetricsEnabled();
             var index = builder.GetIndex();
             var hubInvoker = builder.GetHubInvoker();
