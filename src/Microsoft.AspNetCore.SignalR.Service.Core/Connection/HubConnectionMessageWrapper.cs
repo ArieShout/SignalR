@@ -7,15 +7,15 @@ namespace Microsoft.AspNetCore.SignalR.Client
 {
     public class HubConnectionMessageWrapper
     {
-        HubConnection _hubConnection;
+        int _hubConnectionIndex;
         HubMethodInvocationMessage _hubInvocationMessage;
-        public HubConnectionMessageWrapper(HubConnection hubConnection, HubMethodInvocationMessage hubInvocationMessage)
+        public HubConnectionMessageWrapper(int hubConnectionIndex, HubMethodInvocationMessage hubInvocationMessage)
         {
-            _hubConnection = hubConnection;
+            _hubConnectionIndex = hubConnectionIndex;
             _hubInvocationMessage = hubInvocationMessage;
         }
 
-        public HubConnection HubConnection => _hubConnection;
+        public int HubConnectionIndex => _hubConnectionIndex;
         public HubMethodInvocationMessage HubMethodInvocationMessage => _hubInvocationMessage;
     }
 }

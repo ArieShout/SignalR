@@ -24,6 +24,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
         private readonly ILogger _logger;
         private string _connectionId;
         private int _recvBufferSize = 4096;
+        private int _sendBUfferSize = 4096;
 
         public Task Running { get; private set; } = Task.CompletedTask;
 
@@ -52,6 +53,8 @@ namespace Microsoft.AspNetCore.Sockets.Client
 
             _logger = (loggerFactory ?? NullLoggerFactory.Instance).CreateLogger<WebSocketsTransport>();
             _recvBufferSize = httpOptions.RecvBufferSize;
+            _sendBUfferSize = httpOptions.SendBufferSize;
+            _webSocket.Options.SetBuffer(_recvBufferSize, _recvBufferSize);
         }
 
         public async Task StartAsync(Uri url, Channel<byte[], SendMessage> application, TransferMode requestedTransferMode, string connectionId)

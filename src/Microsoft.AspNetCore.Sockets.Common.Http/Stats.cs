@@ -15,6 +15,9 @@ namespace Microsoft.AspNetCore.Sockets
         private long _readRate;
         private long _writeRate;
 
+        private long _recvRequest;
+        private long _sendRequest;
+
         private long _tcpReadSize;
         private long _tcpWriteSize;
         private long _serviceSend2ClientReq;
@@ -78,6 +81,10 @@ namespace Microsoft.AspNetCore.Sockets
 
         public long ServicePendingWrite => Interlocked.Read(ref _servicePendingWrite);
 
+        public long RecvRequset => Interlocked.Read(ref _recvRequest);
+
+        public long SendRequest => Interlocked.Read(ref _sendRequest);
+
         public void AddWrite2Channel(long bytes)
         {
             Interlocked.Add(ref _write2Channel, bytes);
@@ -134,6 +141,16 @@ namespace Microsoft.AspNetCore.Sockets
         public void AddServiceRecvFromServerReq(long count)
         {
             Interlocked.Add(ref _serviceRecvFromServerReq, count);
+        }
+
+        public void AddRecvRequest(long count)
+        {
+            Interlocked.Add(ref _recvRequest, count);
+        }
+
+        public void AddSendRequest(long count)
+        {
+            Interlocked.Add(ref _sendRequest, count);
         }
     }
 }

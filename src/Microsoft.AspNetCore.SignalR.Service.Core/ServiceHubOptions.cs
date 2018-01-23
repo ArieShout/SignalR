@@ -21,10 +21,21 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         public ProtocolType ProtocolType { get; set; } = ProtocolType.Binary;
 
         public int ReceiveBufferSize { get; set; } = 4096;
+        public int SendBufferSize { get; set; } = 4096;
+        public bool EnableMetrics { get; set; } = false;
 
+        public bool EchoAll4TroubleShooting { get; set; } = false;
         public bool MarkTimestampInCritialPhase { get; set; } = false;
+
+        public MessagePassingType MessagePassingType { get; set; } = MessagePassingType.AsyncCall;
         // TODO: selectively pass claims to SignalR service
         public Func<HttpContext, IEnumerable<Claim>> ClaimProvider { get; set; } =
             context => context.User.Claims;
     }
+    public enum MessagePassingType
+    {
+        Channel,
+        AsyncCall
+    }
+
 }

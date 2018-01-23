@@ -24,7 +24,7 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.SignalR.Service.Core
 {
-    public class ServiceHubEndPoint<THub> : IInvocationBinder, IHeartbeatHandler where THub : Hub
+    public class ServiceHubEndPoint<THub> : IInvocationBinder, IHubInvoker, IHeartbeatHandler where THub : Hub
     {
         private const string OnClientConnectedMethod = "OnConnectedAsync";
         private const string OnDisconnectedAsyncMethod = "OnDisconnectedAsync";
@@ -97,18 +97,25 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
 
             for (int i = 0; i < _options.ConnectionNumber; i++)
             {
-                var hubConnection = new HubConnectionBuilder()
-                    .WithHubBinder(this)
+                var builder = new HubConnectionBuilder();
+                builder.WithHubBinder(this)
                     .WithConsoleLogger(_options.ConsoleLogLevel) // Debug purpose
                     // Add uid to Service URL
                     .WithUrl($"{_authHelper.GetServerUrl<THub>(config)}?uid={_options.ServerId}", _options.ReceiveBufferSize)
                     .WithTransport(TransportType.WebSockets)
                     .WithJwtBearer(() => _authHelper.GetServerToken(config))
-                    .WithMessageQueue(requestHandlingQ)
                     .WithStat(_statManager.Stat())
                     .WithHubProtocol(_options.ProtocolType == ProtocolType.Binary ?
-                        new MessagePackHubProtocol() : (IHubProtocol)new JsonHubProtocol())
-                    .Build();
+                        new MessagePackHubProtocol() : (IHubProtocol)new JsonHubProtocol());
+                if (_options.MessagePassingType == MessagePassingType.Channel)
+                {
+                    builder.WithMessageQueue(requestHandlingQ);
+                }
+                else
+                {
+                    builder.WithHubInvoker(this);
+                }
+                var hubConnection = builder.Build();
                 _hubConnections.Add(hubConnection);
             }
 
@@ -224,9 +231,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                 connContext.User = new ClaimsPrincipal();
                 connContext.User.AddIdentity(new ClaimsIdentity(claims));
             }
-
-            var hubConnContext = new ServiceHubConnectionContext(connContext, messageWrapper.HubConnection.Output,
-                messageWrapper.HubConnection);
+            var hubConnection = _hubConnections[messageWrapper.HubConnectionIndex];
+            var hubConnContext = new ServiceHubConnectionContext(connContext, hubConnection.Output, hubConnection);
 
             _connections.Add(hubConnContext);
             await _lifetimeMgr.OnConnectedAsync(hubConnContext);
@@ -268,9 +274,9 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             }
             catch (Exception e)
             {
-                e.ToString();
+                _logger.FailToCallHub(message.Target, e);
                 // Abort the entire connection if the invocation fails in an unexpected way
-                await messageWrapper.HubConnection.DisposeAsync();
+                await _hubConnections[messageWrapper.HubConnectionIndex].DisposeAsync();
                 //connection.Abort(ex);
             }
         }
@@ -565,6 +571,22 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         public void OnHeartbeat(DateTimeOffset now)
         {
             _statManager.Tick(now);
+        }
+
+        public async Task OnInvocationAsync(HubConnectionMessageWrapper hubMessage, bool isStreamedInvocation = false)
+        {
+            switch (hubMessage.HubMethodInvocationMessage.Target)
+            {
+                case OnClientConnectedMethod:
+                    await HandleOnClientConnectedAsync(hubMessage);
+                    break;
+                case OnDisconnectedAsyncMethod:
+                    await HandleOnDisconnectedAsync(hubMessage);
+                    break;
+                default:
+                    await HandleHubCallAsync(hubMessage);
+                    break;
+            }
         }
 
         private class HubMethodDescriptor

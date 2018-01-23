@@ -110,7 +110,25 @@ namespace Microsoft.AspNetCore.SignalR.Client
             hubConnectionBuilder.AddSetting(HubConnectionBuilderDefaults.StatKey, stat);
             return hubConnectionBuilder;
         }
-        
+
+        public static IHubConnectionBuilder WithIndex(this IHubConnectionBuilder hubConnectionBuilder, int index)
+        {
+            hubConnectionBuilder.AddSetting(HubConnectionBuilderDefaults.IndexKey, index);
+            return hubConnectionBuilder;
+        }
+
+        public static IHubConnectionBuilder WithEnableMetrics(this IHubConnectionBuilder hubConnectionBuilder, bool enableMetrics)
+        {
+            hubConnectionBuilder.AddSetting(HubConnectionBuilderDefaults.EnableMetricsKey, enableMetrics);
+            return hubConnectionBuilder;
+        }
+
+        public static IHubConnectionBuilder WithHubInvoker(this IHubConnectionBuilder hubConnectionBuilder, IHubInvoker hubInvoker)
+        {
+            hubConnectionBuilder.AddSetting(HubConnectionBuilderDefaults.HubInvoker, hubInvoker);
+            return hubConnectionBuilder;
+        }
+
         public static ILoggerFactory GetLoggerFactory(this IHubConnectionBuilder hubConnectionBuilder)
         {
             hubConnectionBuilder.TryGetSetting<ILoggerFactory>(HubConnectionBuilderDefaults.LoggerFactoryKey, out var loggerFactory);
@@ -139,6 +157,23 @@ namespace Microsoft.AspNetCore.SignalR.Client
         {
             hubConnectionBuilder.TryGetSetting<Stats>(HubConnectionBuilderDefaults.StatKey, out var stat);
             return stat;
+        }
+        public static bool isMetricsEnabled(this IHubConnectionBuilder hubConnectionBuilder)
+        {
+            hubConnectionBuilder.TryGetSetting<bool>(HubConnectionBuilderDefaults.EnableMetricsKey, out var enabledMetrics);
+            return enabledMetrics;
+        }
+
+        public static int GetIndex(this IHubConnectionBuilder hubConnectionBuilder)
+        {
+            hubConnectionBuilder.TryGetSetting<int>(HubConnectionBuilderDefaults.IndexKey, out var index);
+            return index;
+        }
+
+        public static IHubInvoker GetHubInvoker(this IHubConnectionBuilder hubConnectionBuilder)
+        {
+            hubConnectionBuilder.TryGetSetting<IHubInvoker>(HubConnectionBuilderDefaults.HubInvoker, out var hubInvoker);
+            return hubInvoker;
         }
     }
 }

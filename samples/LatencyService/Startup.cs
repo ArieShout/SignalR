@@ -40,6 +40,12 @@ namespace Latency
                 hubOption.ConsoleLogLevel = logLevel;
                 hubOption.ConnectionNumber = Configuration.GetValue<int>("SignalRService:ServiceConnectionNo");
                 hubOption.ProtocolType = protoType;
+                hubOption.ReceiveBufferSize = Configuration.GetValue<int>("SignalRService:ReceiveBufferSize");
+                hubOption.SendBufferSize = Configuration.GetValue<int>("SignalRService:SendBufferSize");
+                hubOption.EnableMetrics = Configuration["SignalRService:EnableMetrics"] != null ?
+                    bool.TryParse(Configuration["SignalRService:EnableMetrics"], out var value) && value : false;
+                hubOption.EchoAll4TroubleShooting = Configuration["SignalRService:EchoAll4TroubleShooting"] != null ?
+                    bool.TryParse(Configuration["SignalRService:EchoAll4TroubleShooting"], out var v) && v : false;
             });
             //services.AddSignalRService(hubOption => { hubOption.ConsoleLogLevel = logLevel; });
 	    services.AddSingleton(typeof(IUserTracker<>), typeof(InMemoryUserTracker<>));

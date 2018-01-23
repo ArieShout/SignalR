@@ -18,17 +18,17 @@ namespace Microsoft.AspNetCore.SignalR.Client
         public static readonly string HeadersKey = "Headers";
         public static readonly string JwtBearerTokenFactoryKey = "JwtBearerTokenFactory";
 
-        public static IHubConnectionBuilder WithUrl(this IHubConnectionBuilder hubConnectionBuilder, string url, int size = 4096)
+        public static IHubConnectionBuilder WithUrl(this IHubConnectionBuilder hubConnectionBuilder, string url, int recvSize = 4096, int sendSize = 4096)
         {
             if (url == null)
             {
                 throw new ArgumentNullException(nameof(url));
             }
 
-            return hubConnectionBuilder.WithUrl(new Uri(url), size);
+            return hubConnectionBuilder.WithUrl(new Uri(url), recvSize, sendSize);
         }
 
-        public static IHubConnectionBuilder WithUrl(this IHubConnectionBuilder hubConnectionBuilder, Uri url, int size = 4096)
+        public static IHubConnectionBuilder WithUrl(this IHubConnectionBuilder hubConnectionBuilder, Uri url, int recvSize = 4096, int sendSize = 4096)
         {
             if (url == null)
             {
@@ -43,7 +43,8 @@ namespace Microsoft.AspNetCore.SignalR.Client
                     HttpMessageHandler = hubConnectionBuilder.GetMessageHandler(),
                     Headers = headers != null ? new ReadOnlyDictionary<string, string>(headers) : null,
                     JwtBearerTokenFactory = hubConnectionBuilder.GetJwtBearerTokenFactory(),
-                    RecvBufferSize = size
+                    RecvBufferSize = recvSize < 4096 ? 4096 : recvSize,
+                    SendBufferSize = sendSize < 4096 ? 4096 : sendSize
                 };
 
                 return new HttpConnection(url,

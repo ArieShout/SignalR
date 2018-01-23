@@ -79,7 +79,12 @@ namespace Microsoft.AspNetCore.SignalR.Core.Internal
         private static readonly Action<ILogger, TimeSpan, DateTimeOffset, Exception> _heartbeatSlow =
             LoggerMessage.Define<TimeSpan, DateTimeOffset>(LogLevel.Warning, new EventId(22, nameof(HeartbeatSlow)),
                 @"Heartbeat took longer than ""{interval}"" at ""{now}"".");
-
+        private static readonly Action<ILogger, string, Exception> _failToCallHub =
+            LoggerMessage.Define<string>(LogLevel.Error, new EventId(22, nameof(_failToCallHub)), "Fail to call hubMethod '{hubMethod}'.");
+        public static void FailToCallHub(this ILogger logger, string hub, Exception exception)
+        {
+            _failToCallHub(logger, hub, exception);
+        }
         public static void HeartbeatSlow(this ILogger logger, TimeSpan interval, DateTimeOffset now)
         {
             _heartbeatSlow(logger, interval, now, null);

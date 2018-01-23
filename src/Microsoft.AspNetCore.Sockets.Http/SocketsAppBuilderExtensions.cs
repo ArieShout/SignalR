@@ -17,8 +17,12 @@ namespace Microsoft.AspNetCore.Builder
             var routes = new RouteBuilder(app);
 
             callback(new SocketRouteBuilder(routes, dispatcher));
-
-            app.UseWebSockets();
+            var webOption = new WebSocketOptions
+            {
+                KeepAliveInterval = TimeSpan.FromSeconds(120),
+                ReceiveBufferSize = 4096
+            };
+            app.UseWebSockets(webOption);
             app.UseRouter(routes.Build());
             return app;
         }

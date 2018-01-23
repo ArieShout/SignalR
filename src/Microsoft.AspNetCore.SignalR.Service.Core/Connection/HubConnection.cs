@@ -20,7 +20,7 @@ using Microsoft.AspNetCore.Sockets.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.AspNetCore.SignalR.Service.Core;
-
+using Microsoft.AspNetCore.SignalR.Core;
 namespace Microsoft.AspNetCore.SignalR.Client
 {
     public class HubConnection
@@ -41,10 +41,14 @@ namespace Microsoft.AspNetCore.SignalR.Client
         private Channel<HubMessage> _output;
         private Channel<HubConnectionMessageWrapper> _requestHandlingQueue;
         private Stats _stat;
+        public int Index { get; set; } = -1;
+        private IHubInvoker _hubInvoker;
+        public bool EnableMetrics { get; set; } = false;
         public Task Closed { get; }
         public Channel<HubMessage> Output => _output;
         public HubConnection(IConnection connection, IHubProtocol protocol, ILoggerFactory loggerFactory,
-            IInvocationBinder binder, Channel<HubConnectionMessageWrapper> requestHandlingQ, Stats stat)
+            IInvocationBinder binder, Channel<HubConnectionMessageWrapper> requestHandlingQ, Stats stat,
+            bool enableMetrics, int index, IHubInvoker hubInvoker)
         {
             if (connection == null)
             {
@@ -55,25 +59,23 @@ namespace Microsoft.AspNetCore.SignalR.Client
             {
                 throw new ArgumentNullException(nameof(protocol));
             }
-
-            if (requestHandlingQ == null)
-            {
-                throw new ArgumentNullException(nameof(requestHandlingQ));
-            }
-
-            if (stat == null)
-            {
-                throw new ArgumentNullException(nameof(stat));
-            }
-
+            _hubInvoker = hubInvoker;
+            Index = index;
+            EnableMetrics = enableMetrics;
             _stat = stat;
+            _requestHandlingQueue = requestHandlingQ;
+
+            if (_hubInvoker == null && _requestHandlingQueue == null)
+            {
+                throw new ArgumentNullException("Please specify HubInvoker or RequestHandlingQueue");
+            }
             _connection = connection;
             _binder = binder ?? new HubBinder(this);
             _protocol = protocol;
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = _loggerFactory.CreateLogger<HubConnection>();
             _connection.OnReceived((data, state) => ((HubConnection)state).OnDataReceivedAsync(data), this);
-            _requestHandlingQueue = requestHandlingQ;
+            
             _output = Channel.CreateUnbounded<HubMessage>();
             async Task WriteToTransport()
             {
@@ -381,14 +383,27 @@ namespace Microsoft.AspNetCore.SignalR.Client
                         case InvocationMessage invocation:
                             _logger.ReceivedInvocation(invocation.InvocationId, invocation.Target,
                                 invocation.ArgumentBindingException != null ? null : invocation.Arguments);
-                            HubConnectionMessageWrapper request = new HubConnectionMessageWrapper(this, invocation);
-                            while (await _requestHandlingQueue.Writer.WaitToWriteAsync())
+                            if (EnableMetrics)
                             {
-                                if (_requestHandlingQueue.Writer.TryWrite(request))
+                                ServiceMetrics.MarkReceiveMsgFromServiceStage(invocation.Metadata);
+                            }
+                            _stat.AddRecvRequest(1);
+                            HubConnectionMessageWrapper request = new HubConnectionMessageWrapper(Index, invocation);
+                            if (_hubInvoker != null)
+                            {
+                                _ = _hubInvoker.OnInvocationAsync(request, false);
+                            }
+                            else
+                            {
+                                while (await _requestHandlingQueue.Writer.WaitToWriteAsync())
                                 {
-                                    break;
+                                    if (_requestHandlingQueue.Writer.TryWrite(request))
+                                    {
+                                        break;
+                                    }
                                 }
                             }
+                            
                             break;
                         case CompletionMessage completion:
                             OnCompletionMessage(completion);
