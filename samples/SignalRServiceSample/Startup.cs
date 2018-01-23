@@ -53,6 +53,8 @@ namespace SignalRServiceSample
                 {
                     options.MarkTimestampInCritialPhase = Configuration["Diagnostic:EnableMetrics"] != null ?
                         bool.TryParse(Configuration["Diagnostic:EnableMetrics"], out var value) && value : false;
+                    options.EchoAll4TroubleShooting = Configuration["Diagnostic:EchoAll4TroubleShooting"] != null ?
+                        bool.TryParse(Configuration["Diagnostic:EchoAll4TroubleShooting"], out var v) && v : false;
                 });
 
             var redisConnStr = $"{Configuration["Redis:ConnectionString"]}";
