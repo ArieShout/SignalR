@@ -341,10 +341,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                                     {
                                         _ = SendClientMsgBackDirectly(connection, invocationMessage);
                                         var completionMsg = CompletionMessage.WithResult(invocationMessage.InvocationId, "");
-                                        if (_hubOptions.MarkTimestampInCritialPhase)
-                                        {
-                                            ServiceMetrics.MarkSendMsgToClientStage(completionMsg.Metadata);
-                                        }
+                                        completionMsg.AddMetadata(invocationMessage.Metadata);
                                         _ = SendClientMsgBackDirectly(connection, completionMsg);
                                     }
                                     break;
