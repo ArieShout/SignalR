@@ -42,11 +42,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         private long _nextInvocationId = 0;
 
-        public RedisHubLifetimeManager2(ILogger<RedisHubLifetimeManager2<THub>> logger,
-                                       RedisOptions2 options,
-                                       string hubName)
+        public RedisHubLifetimeManager2(ILogger<RedisHubLifetimeManager2<THub>> logger, RedisOptions2 options,
+                                       string serviceId, string hubName)
         {
-            _channelNamePrefix = hubName;
+            _channelNamePrefix = $"{serviceId}:{hubName}";
 
             _logger = logger;
             _options = options;

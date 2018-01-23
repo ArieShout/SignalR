@@ -10,11 +10,13 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
     {
         private readonly ILoggerFactory _loggerFactory;
         private readonly IOptionsFactory<RedisOptions2> _redisOptionsFactory;
+        private readonly SignalRServiceOptions _options;
 
-        public RedisHubLifetimeManagerFactory(ILoggerFactory loggerFactory, IOptionsFactory<RedisOptions2> redisOptionsFactory)
+        public RedisHubLifetimeManagerFactory(ILoggerFactory loggerFactory, IOptionsFactory<RedisOptions2> redisOptionsFactory, IOptions<SignalRServiceOptions> serviceOptions)
         {
             _loggerFactory = loggerFactory;
             _redisOptionsFactory = redisOptionsFactory;
+            _options = serviceOptions.Value;
         }
 
         public HubLifetimeManager<THub> Create<THub>(string hubName) where THub : Hub
@@ -22,7 +24,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             return new RedisHubLifetimeManager2<THub>(
                 _loggerFactory.CreateLogger<RedisHubLifetimeManager2<THub>>(),
                 _redisOptionsFactory.Create(string.Empty),
-                hubName);
+                _options.ServiceId, hubName);
         }
     }
 }
