@@ -74,7 +74,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                 overall = new
                 {
                     client = clientOverall,
-                    server = serverOverall
+                    server = serverOverall,
+                    // Expose fields for integration first. We will switch to master branch later.
+                    success = 0,
+                    error = 0
                 },
                 client = clientStats,
                 server = serverStats
