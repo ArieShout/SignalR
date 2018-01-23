@@ -232,7 +232,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             _connections.Add(hubConnContext);
             await _lifetimeMgr.OnConnectedAsync(hubConnContext);
             await HubOnConnectedAsync(hubConnContext);
-            await SendMessageAsync(hubConnContext, CompletionMessage.WithResult(message.InvocationId, ""));
+            await SendMessageAsync(hubConnContext, CompletionMessage.WithResult(message.InvocationId, "").AddConnectionId(connectionId));
         }
 
         private async Task HandleOnDisconnectedAsync(HubConnectionMessageWrapper messageWrapper)
@@ -242,7 +242,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             var hubConnContext = _connections[connectionId];
             await HubOnDisconnectedAsync(hubConnContext);
             await _lifetimeMgr.OnDisconnectedAsync(hubConnContext);
-            await SendMessageAsync(hubConnContext, CompletionMessage.WithResult(message.InvocationId, ""));
+            await SendMessageAsync(hubConnContext, CompletionMessage.WithResult(message.InvocationId, "").AddConnectionId(connectionId));
             _connections.Remove(hubConnContext);
         }
 
@@ -439,7 +439,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                         _logger.SendingResult(message.InvocationId,
                             methodExecutor.MethodReturnType.FullName);
                         await SendMessageAsync(connection,
-                            CompletionMessage.WithResult(message.InvocationId, result));
+                            CompletionMessage.WithResult(message.InvocationId, result).AddConnectionId(connection.ConnectionId));
                     }
                 }
                 catch (TargetInvocationException ex)

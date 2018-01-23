@@ -169,8 +169,8 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                 default:
                     throw new FormatException("Invalid invocation result kind.");
             }
-
-            return new CompletionMessage(invocationId, error, result, hasResult);
+            var metadata = ReadMetedata(unpacker, "metaData");
+            return new CompletionMessage(invocationId, error, result, hasResult).AddMetadata(metadata);
         }
 
         private static CancelInvocationMessage CreateCancelInvocationMessage(Unpacker unpacker)
@@ -267,6 +267,7 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                     packer.PackObject(completionMessage.Result, _serializationContext);
                     break;
             }
+            packer.PackDictionary<string, string>(completionMessage.Metadata);
         }
 
         private void WriteCancelInvocationMessage(CancelInvocationMessage cancelInvocationMessage, Packer packer)
