@@ -142,7 +142,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                             if (typeof(THub).Equals(typeof(ClientHub)))
                             {
                                 _hubStatusManager.AddSend2ClientReq(1);
-                                if (_hubOptions.MarkTimestampInCritialPhase)
+                                if (hubMessage is CompletionMessage && _hubOptions.MarkTimestampInCritialPhase)
                                 {
                                     ServiceMetrics.MarkSendMsgToClientStage(((HubInvocationMessage)hubMessage).Metadata);
                                 }
