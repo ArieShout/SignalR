@@ -138,22 +138,26 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                     {
                         while (output.Reader.TryRead(out var hubMessage))
                         {
-                            // Add statistics
                             if (typeof(THub).Equals(typeof(ClientHub)))
                             {
                                 _hubStatusManager.AddSend2ClientReq(1);
+                                // Avoid adding statistics here because of 'synchronization method was called from an unsynchronized block of code'
+                                /*
                                 if (hubMessage is CompletionMessage && _hubOptions.MarkTimestampInCritialPhase)
                                 {
                                     ServiceMetrics.MarkSendMsgToClientStage(((HubInvocationMessage)hubMessage).Metadata);
                                 }
+                                */
                             }
                             else
                             {
                                 _hubStatusManager.AddSend2ServerReq(1);
+                                /*
                                 if (_hubOptions.MarkTimestampInCritialPhase)
                                 {
                                     ServiceMetrics.MarkSendMsgToServerStage(((HubInvocationMessage)hubMessage).Metadata);
                                 }
+                                */
                             }
                             var buffer = protocolReaderWriter.WriteMessage(hubMessage);
                             while (await connection.Transport.Writer.WaitToWriteAsync())

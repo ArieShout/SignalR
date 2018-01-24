@@ -30,10 +30,7 @@ namespace Microsoft.AspNetCore.SignalR.Core
 
         public static void MarkSendMsgToServiceStage(IDictionary<string, string> meta)
         {
-            if (!meta.ContainsKey(SendMsgToServiceStage))
-            {
-                meta.Add(SendMsgToServiceStage, Convert.ToString(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
-            }
+            meta.Add(SendMsgToServiceStage, Convert.ToString(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
         }
 
         public static void MarkReceiveMsgFromServerStage(IDictionary<string, string> meta)
@@ -52,7 +49,7 @@ namespace Microsoft.AspNetCore.SignalR.Core
             {
                 meta.TryGetValue(ReceiveMsgFromServerStage, out var recvFromServer);
                 meta.TryGetValue(SendMsgToServerStage, out var sendToServer);
-                Int64 dur = (Convert.ToInt64(recvFromServer) - Convert.ToInt64(sendToServer)) / 1000000;
+                Int64 dur = Convert.ToInt64(recvFromServer) - Convert.ToInt64(sendToServer);
                 return (long)dur;
             }
             return 0;

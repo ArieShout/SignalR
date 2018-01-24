@@ -2,6 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.SignalR.Core;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 
 namespace Microsoft.AspNetCore.SignalR.Service.Server
@@ -32,11 +34,14 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         private readonly IHubConnectionRouter _router;
         private readonly IHubLifetimeManagerFactory _hubLifetimeManagerFactory;
-
-        public HubMessageBroker(IHubConnectionRouter router, IHubLifetimeManagerFactory hubLifetimeManagerFactory)
+        private readonly HubOptions _hubOptions;
+        private readonly IHubStatusManager _hubStatusManager;
+        public HubMessageBroker(IHubConnectionRouter router, IHubLifetimeManagerFactory hubLifetimeManagerFactory, IHubStatusManager hubStatusManager, IOptions<HubOptions> hubOptions)
         {
             _router = router;
             _hubLifetimeManagerFactory = hubLifetimeManagerFactory;
+            _hubOptions = hubOptions.Value;
+            _hubStatusManager = hubStatusManager;
         }
 
         #region Client Connections
@@ -54,7 +59,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             // So we need to create a ServerHubLifetimeManager to send the message to Redis.
             GetOrAddServerHubManager(hubName);
 
-            // Invoke OnConnectedAsync on server
+            // Invoke OnConnectedAsync on server+
             var message = new InvocationMessage(Guid.NewGuid().ToString(), true, OnConnectedMethodName, null,
                 new object[0]);
             message.AddClaims(context.User.Claims);
@@ -89,6 +94,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             {
                 // Add original connection Id to message metadata
                 message.AddConnectionId(connection.ConnectionId);
+                if (_hubOptions.MarkTimestampInCritialPhase)
+                {
+                    ServiceMetrics.MarkSendMsgToServerStage(message.Metadata);
+                }
                 await ((DefaultHubLifetimeManager<ServerHub>) serverHubManager).SendMessageAsync(target.ConnectionId, message);
             }
         }
@@ -133,6 +142,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             if (message.TryGetConnectionId(out var connectionId) &&
                 _clientHubManagerDict.TryGetValue(hubName, out var clientHubManager))
             {
+                if (_hubOptions.MarkTimestampInCritialPhase)
+                {
+                    ServiceMetrics.MarkSendMsgToClientStage(message.Metadata);
+                }
                 await ((DefaultHubLifetimeManager<ClientHub>) clientHubManager).SendMessageAsync(connectionId,
                     message);
             }
