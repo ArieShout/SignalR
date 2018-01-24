@@ -34,7 +34,7 @@ namespace Microsoft.AspNetCore.SignalR
             _logger = loggerFactory.CreateLogger<ServiceClient<THub>>();
         }
 
-        public void UseService(SignalR signalr)
+        internal void UseService(SignalR signalr)
         {
             var serviceUrl = GetServiceUrl(signalr);
             var httpOptions = new HttpOptions

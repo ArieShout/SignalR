@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
-using Microsoft.AspNetCore.SignalR.Service;
+using Microsoft.AspNetCore.SignalR.Internal;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.SignalR
 {
@@ -46,20 +47,35 @@ namespace Microsoft.AspNetCore.SignalR
 
         public string GetClientUrl<THub>() where THub : Hub
         {
+            return GetClientUrl(typeof(THub).Name.ToLower());
+        }
+
+        public string GetClientUrl(string hubName)
+        {
             // TODO: Use HTTPS
-            return $"http://{HostName}/client/?hub={typeof(THub).Name.ToLower()}";
+            return $"http://{HostName}/client/?hub={hubName}";
         }
 
         public string GetServerUrl<THub>() where THub : Hub
         {
+            return GetServerUrl(typeof(THub).Name.ToLower());
+        }
+
+        public string GetServerUrl(string hubName)
+        {
             // TODO: Use HTTPS
-            return $"http://{HostName}/server/?hub={typeof(THub).Name.ToLower()}";
+            return $"http://{HostName}/server/?hub={hubName}";
         }
 
         public string GenerateClientToken<THub>(IEnumerable<Claim> claims = null) where THub : Hub
         {
+            return GenerateClientToken(typeof(THub).Name.ToLower(), claims);
+        }
+
+        public string GenerateClientToken(string hubName, IEnumerable<Claim> claims = null)
+        {
             return AuthenticationHelper.GenerateJwtBearer(
-                audience: GetClientUrl<THub>(),
+                audience: $"{HostName}/client/?hub={hubName}",
                 claims: claims,
                 expires: DateTime.UtcNow.Add(JwtBearerLifetime),
                 signingKey: AccessKey
@@ -68,21 +84,34 @@ namespace Microsoft.AspNetCore.SignalR
 
         public string GenerateServerToken<THub>() where THub : Hub
         {
+            return GenerateServerToken(typeof(THub).Name.ToLower());
+        }
+
+        public string GenerateServerToken(string hubName)
+        {
             return AuthenticationHelper.GenerateJwtBearer(
-                audience: GetServerUrl<THub>(),
+                audience: $"{HostName}/server/?hub={hubName}",
+                claims: null,
                 expires: DateTime.UtcNow.Add(JwtBearerLifetime),
                 signingKey: AccessKey
             );
         }
 
-        public void CreateServiceClient<THub>() where THub : Hub
-        {
-            throw new NotImplementedException();
-        }
+        //public ServiceClient<THub> CreateServiceClient<THub>() where THub : Hub
+        //{
+        //    var serviceClient = ServiceProvider.GetRequiredService<ServiceClient<THub>>();
+        //    serviceClient.UseService(this);
+        //    return serviceClient;
+        //}
 
         public IHubClients<IServiceClientProxy> CreateHubClientsProxy<THub>() where THub : Hub
         {
-            return new HubClientsProxy<THub>(this);
+            return CreateHubClientsProxy(typeof(THub).Name.ToLower());
+        }
+
+        public IHubClients<IServiceClientProxy> CreateHubClientsProxy(string hubName)
+        {
+            return new HubClientsProxy(this, hubName);
         }
 
         #endregion
@@ -108,6 +137,26 @@ namespace Microsoft.AspNetCore.SignalR
             return TryParse(connectionString, out var signalr)
                 ? signalr
                 : throw new ArgumentException($"Invalid connection string: {connectionString}");
+        }
+
+        private static IServiceProvider _externalServiceProvider = null;
+
+        private static readonly Lazy<IServiceProvider> InternalServiceProvider =
+            new Lazy<IServiceProvider>(
+                () => new ServiceCollection()
+                    .AddLogging()
+                    .AddAuthorization()
+                    .AddSingleton(typeof(HubLifetimeManager<>), typeof(ServiceHubLifetimeManager<>))
+                    .AddSingleton(typeof(IHubProtocolResolver), typeof(DefaultHubProtocolResolver))
+                    .AddSingleton(typeof(IHubContext<>), typeof(HubContext<>))
+                    .AddSingleton(typeof(IHubInvoker<>), typeof(ServiceHubInvoker<>))
+                    .AddTransient(typeof(IHubActivator<>), typeof(DefaultHubActivator<>))
+                    .BuildServiceProvider());
+
+        internal static IServiceProvider ServiceProvider
+        {
+            get => _externalServiceProvider ?? InternalServiceProvider.Value;
+            set => _externalServiceProvider = value;
         }
 
         #endregion

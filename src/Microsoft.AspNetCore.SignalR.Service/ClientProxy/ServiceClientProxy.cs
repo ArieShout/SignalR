@@ -41,13 +41,14 @@ namespace Microsoft.AspNetCore.SignalR
             request.Headers.AcceptCharset.Clear();
             request.Headers.AcceptCharset.Add(new StringWithQualityHeaderValue("UTF-8"));
 
+            //request.Headers.Add("Content-Type", "application/json; charset=UTF-8");
             request.Content = new StringContent(
                 JsonConvert.SerializeObject(new
                 {
                     method = method,
                     arguments = args,
                     excluded = _excludedIds
-                }), Encoding.UTF8, "aplication/json"); 
+                }), Encoding.UTF8, "application/json");
 
             var client = new HttpClient ();
             return client.SendAsync(request);

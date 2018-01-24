@@ -17,7 +17,7 @@ namespace Microsoft.AspNetCore.SignalR
         public static string GenerateJwtBearer(
             string issuer = null,
             string audience = null,
-            IEnumerable<Claim> claims = null,
+            ClaimsIdentity subject = null,
             DateTime? expires = null,
             string signingKey = null)
         {
@@ -28,13 +28,24 @@ namespace Microsoft.AspNetCore.SignalR
                 credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
             }
 
-            var token = new JwtSecurityToken(
+            var token = JwtTokenHandler.CreateJwtSecurityToken(
                 issuer: issuer,
                 audience: audience,
-                claims: claims,
+                subject: subject,
                 expires: expires,
                 signingCredentials: credentials);
             return JwtTokenHandler.WriteToken(token);
+        }
+
+        public static string GenerateJwtBearer(
+            string issuer = null,
+            string audience = null,
+            IEnumerable<Claim> claims = null,
+            DateTime? expires = null,
+            string signingKey = null)
+        {
+            var subject = claims == null ? null : new ClaimsIdentity(claims);
+            return GenerateJwtBearer(issuer, audience, subject, expires, signingKey);
         }
     }
 }

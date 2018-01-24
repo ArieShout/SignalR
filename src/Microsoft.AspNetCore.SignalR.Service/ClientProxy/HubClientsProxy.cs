@@ -1,57 +1,59 @@
 ﻿using System.Collections.Generic;
 
-namespace Microsoft.AspNetCore.SignalR.Service
+namespace Microsoft.AspNetCore.SignalR
 {
-    public class HubClientsProxy<THub> : IHubClients<IServiceClientProxy> where THub : Hub
+    public class HubClientsProxy : IHubClients<IServiceClientProxy>
     {
         private readonly SignalR _signalr;
+        private readonly string _hubName;
 
-        public HubClientsProxy(SignalR signalr)
+        public HubClientsProxy(SignalR signalr, string hubName)
         {
             _signalr = signalr;
-            All = _signalr.CreateAllClientsProxy<THub>();
+            _hubName = hubName;
+            All = _signalr.CreateAllClientsProxy(_hubName);
         }
 
         public IServiceClientProxy All { get; }
 
         public IServiceClientProxy AllExcept(IReadOnlyList<string> excludedIds)
         {
-            return _signalr.CreateAllClientsExceptProxy<THub>(excludedIds);
+            return _signalr.CreateAllClientsExceptProxy(_hubName, excludedIds);
         }
 
         public IServiceClientProxy Client(string connectionId)
         {
-            return _signalr.CreateSingleClientProxy<THub>(connectionId);
+            return _signalr.CreateSingleClientProxy(_hubName, connectionId);
         }
 
         public IServiceClientProxy Clients(IReadOnlyList<string> connectionIds)
         {
-            return _signalr.CreateMultipleClientProxy<THub>(connectionIds);
+            return _signalr.CreateMultipleClientProxy(_hubName, connectionIds);
         }
 
         public IServiceClientProxy Group(string groupName)
         {
-            return _signalr.CreateSingleGroupProxy<THub>(groupName);
+            return _signalr.CreateSingleGroupProxy(_hubName, groupName);
         }
 
         public IServiceClientProxy Groups(IReadOnlyList<string> groupNames)
         {
-            return _signalr.CreateMultipleGroupProxy<THub>(groupNames);
+            return _signalr.CreateMultipleGroupProxy(_hubName, groupNames);
         }
 
         public IServiceClientProxy GroupExcept(string groupName, IReadOnlyList<string> excludeIds)
         {
-            return _signalr.CreateSingleGroupExceptProxy<THub>(groupName, excludeIds);
+            return _signalr.CreateSingleGroupExceptProxy(_hubName, groupName, excludeIds);
         }
 
         public IServiceClientProxy User(string userId)
         {
-            return _signalr.CreateSingleUserProxy<THub>(userId);
+            return _signalr.CreateSingleUserProxy(_hubName, userId);
         }
 
         public IServiceClientProxy Users(IReadOnlyList<string> userIds)
         {
-            return _signalr.CreateMultipleUserProxy<THub>(userIds);
+            return _signalr.CreateMultipleUserProxy(_hubName, userIds);
         }
     }
 }

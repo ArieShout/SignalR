@@ -19,6 +19,7 @@ namespace Microsoft.AspNetCore.SignalR
 {
     public class ServiceConnection<THub> where THub : Hub
     {
+        public static readonly TimeSpan DefaultServerTimeout = TimeSpan.FromSeconds(30); // Server ping rate is 15 sec, this is 2 times that.
         private const string OnConnectedAsyncMethod = "onconnectedasync";
         private const string OnDisconnectedAsyncMethod = "ondisconnectedasync";
 
@@ -38,10 +39,12 @@ namespace Microsoft.AspNetCore.SignalR
 
         private CancellationTokenSource _connectionActive;
 
-        private int _nextId = 0;
+        //private int _nextId = 0;
         private volatile bool _startCalled;
         private Timer _timeoutTimer;
         private bool _needKeepAlive;
+
+        public TimeSpan ServerTimeout { get; set; } = DefaultServerTimeout;
 
         public ServiceConnection(IConnection connection,
             IHubProtocol protocol,
@@ -56,6 +59,9 @@ namespace Microsoft.AspNetCore.SignalR
             _hubInvoker = hubInvoker;
             _lifetimeManager = lifetimeManager;
             _output = Channel.CreateUnbounded<HubMessage>();
+
+            // Create the timer for timeout, but disabled by default (we enable it when started).
+            _timeoutTimer = new Timer(state => ((ServiceConnection<THub>)state).TimeoutElapsed(), this, Timeout.Infinite, Timeout.Infinite);
 
             connection.OnReceived((data, state) => ((ServiceConnection<THub>)state).OnDataReceivedAsync(data), this);
         }
@@ -104,6 +110,8 @@ namespace Microsoft.AspNetCore.SignalR
                 NegotiationProtocol.WriteMessage(new NegotiationMessage(_protocol.Name), memoryStream);
                 await _connection.SendAsync(memoryStream.ToArray(), _connectionActive.Token);
             }
+
+            //ResetTimeoutTimer();
         }
 
         private IDataEncoder GetDataEncoder(TransferMode requestedTransferMode, TransferMode actualTransferMode)
@@ -134,6 +142,20 @@ namespace Microsoft.AspNetCore.SignalR
 
         #region Private Methods
 
+        private void TimeoutElapsed()
+        {
+            _connection.AbortAsync(new TimeoutException($"Server timeout ({ServerTimeout.TotalMilliseconds:0.00}ms) elapsed without receiving a message from the server."));
+        }
+
+        private void ResetTimeoutTimer()
+        {
+            if (_needKeepAlive)
+            {
+                //_logger.ResettingKeepAliveTimer();
+                _timeoutTimer.Change(ServerTimeout, Timeout.InfiniteTimeSpan);
+            }
+        }
+
         private async Task WriteToTransport()
         {
             while (await _output.Reader.WaitToReadAsync())
@@ -147,6 +169,11 @@ namespace Microsoft.AspNetCore.SignalR
 
         private async Task OnDataReceivedAsync(byte[] data)
         {
+            if (!_startCalled)
+            {
+                throw new InvalidOperationException($"The '{nameof(OnDataReceivedAsync)}' method cannot be called before the connection has been started.");
+            }
+
             if (_protocolReaderWriter.ReadMessages(data, _hubInvoker, out var messages))
             {
                 foreach (var message in messages)

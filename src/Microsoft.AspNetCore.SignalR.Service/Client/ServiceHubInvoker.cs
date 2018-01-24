@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR.Internal;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
+using Microsoft.AspNetCore.Sockets.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
@@ -24,15 +25,15 @@ namespace Microsoft.AspNetCore.SignalR
         private readonly Dictionary<string, HubMethodDescriptor> _methods =
             new Dictionary<string, HubMethodDescriptor>(StringComparer.OrdinalIgnoreCase);
 
+        private readonly IServiceProvider _serviceProvider;
         private readonly IHubContext<THub> _hubContext;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly ILogger<ServiceHubInvoker<THub>> _logger;
 
-        public ServiceHubInvoker(ILogger<ServiceHubInvoker<THub>> logger, IServiceScopeFactory serviceScopeFactory, IHubContext<THub> hubContext)
+        public ServiceHubInvoker(IServiceProvider serviceProvider, IHubContext<THub> hubContext, ILogger<ServiceHubInvoker<THub>> logger)
         {
-            _logger = logger;
-            _serviceScopeFactory = serviceScopeFactory;
+            _serviceProvider = serviceProvider;
             _hubContext = hubContext;
+            _logger = logger;
 
             DiscoverHubMethods();
         }
@@ -43,19 +44,16 @@ namespace Microsoft.AspNetCore.SignalR
         {
             try
             {
-                using (var scope = _serviceScopeFactory.CreateScope())
+                var hubActivator = _serviceProvider.GetRequiredService<IHubActivator<THub>>();
+                var hub = hubActivator.Create();
+                try
                 {
-                    var hubActivator = scope.ServiceProvider.GetRequiredService<IHubActivator<THub>>();
-                    var hub = hubActivator.Create();
-                    try
-                    {
-                        InitializeHub(hub, connection);
-                        await hub.OnConnectedAsync();
-                    }
-                    finally
-                    {
-                        hubActivator.Release(hub);
-                    }
+                    InitializeHub(hub, connection);
+                    await hub.OnConnectedAsync();
+                }
+                finally
+                {
+                    hubActivator.Release(hub);
                 }
             }
             catch (Exception)
@@ -82,19 +80,16 @@ namespace Microsoft.AspNetCore.SignalR
                 //    //_logger.AbortFailed(ex);
                 //}
 
-                using (var scope = _serviceScopeFactory.CreateScope())
+                var hubActivator = _serviceProvider.GetRequiredService<IHubActivator<THub>>();
+                var hub = hubActivator.Create();
+                try
                 {
-                    var hubActivator = scope.ServiceProvider.GetRequiredService<IHubActivator<THub>>();
-                    var hub = hubActivator.Create();
-                    try
-                    {
-                        InitializeHub(hub, connection);
-                        await hub.OnDisconnectedAsync(exception);
-                    }
-                    finally
-                    {
-                        hubActivator.Release(hub);
-                    }
+                    InitializeHub(hub, connection);
+                    await hub.OnConnectedAsync();
+                }
+                finally
+                {
+                    hubActivator.Release(hub);
                 }
             }
             catch (Exception)
@@ -173,57 +168,57 @@ namespace Microsoft.AspNetCore.SignalR
         {
             var methodExecutor = descriptor.MethodExecutor;
 
-            using (var scope = _serviceScopeFactory.CreateScope())
+            if (!await IsHubMethodAuthorized(_serviceProvider, connection.User, descriptor.Policies))
             {
-                if (!await IsHubMethodAuthorized(scope.ServiceProvider, connection.User, descriptor.Policies))
-                {
-                    //_logger.HubMethodNotAuthorized(hubMethodInvocationMessage.Target);
-                    await SendInvocationError(hubMethodInvocationMessage, connection,
-                        $"Failed to invoke '{hubMethodInvocationMessage.Target}' because user is unauthorized");
-                    return;
-                }
+                //_logger.HubMethodNotAuthorized(hubMethodInvocationMessage.Target);
+                await SendInvocationError(hubMethodInvocationMessage, connection,
+                    $"Failed to invoke '{hubMethodInvocationMessage.Target}' because user is unauthorized");
+                return;
+            }
 
-                if (!await ValidateInvocationMode(methodExecutor.MethodReturnType, isStreamedInvocation, hubMethodInvocationMessage, connection))
-                {
-                    return;
-                }
+            if (!await ValidateInvocationMode(methodExecutor.MethodReturnType, isStreamedInvocation,
+                hubMethodInvocationMessage, connection))
+            {
+                return;
+            }
 
-                var hubActivator = scope.ServiceProvider.GetRequiredService<IHubActivator<THub>>();
-                var hub = hubActivator.Create();
+            var hubActivator = _serviceProvider.GetRequiredService<IHubActivator<THub>>();
+            var hub = hubActivator.Create();
 
-                try
-                {
-                    InitializeHub(hub, connection);
+            try
+            {
+                InitializeHub(hub, connection);
 
-                    var result = await ExecuteHubMethod(methodExecutor, hub, hubMethodInvocationMessage.Arguments);
+                var result = await ExecuteHubMethod(methodExecutor, hub, hubMethodInvocationMessage.Arguments);
 
-                    if (isStreamedInvocation)
-                    {
-                        var enumerator = GetStreamingEnumerator(connection, hubMethodInvocationMessage.InvocationId, methodExecutor, result, methodExecutor.MethodReturnType);
-                        //_logger.StreamingResult(hubMethodInvocationMessage.InvocationId, methodExecutor.MethodReturnType.FullName);
-                        await StreamResultsAsync(hubMethodInvocationMessage.InvocationId, connection, enumerator);
-                    }
-                    // Non-empty/null InvocationId ==> Blocking invocation that needs a response
-                    else if (!string.IsNullOrEmpty(hubMethodInvocationMessage.InvocationId))
-                    {
-                        //_logger.SendingResult(hubMethodInvocationMessage.InvocationId, methodExecutor.MethodReturnType.FullName);
-                        await SendMessageAsync(connection, CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, result));
-                    }
-                }
-                catch (TargetInvocationException ex)
+                if (isStreamedInvocation)
                 {
-                    //_logger.FailedInvokingHubMethod(hubMethodInvocationMessage.Target, ex);
-                    await SendInvocationError(hubMethodInvocationMessage, connection, ex.InnerException.Message);
+                    var enumerator = GetStreamingEnumerator(connection, hubMethodInvocationMessage.InvocationId,
+                        methodExecutor, result, methodExecutor.MethodReturnType);
+                    //_logger.StreamingResult(hubMethodInvocationMessage.InvocationId, methodExecutor.MethodReturnType.FullName);
+                    await StreamResultsAsync(hubMethodInvocationMessage.InvocationId, connection, enumerator);
                 }
-                catch (Exception ex)
+                // Non-empty/null InvocationId ==> Blocking invocation that needs a response
+                else if (!string.IsNullOrEmpty(hubMethodInvocationMessage.InvocationId))
                 {
-                    //_logger.FailedInvokingHubMethod(hubMethodInvocationMessage.Target, ex);
-                    await SendInvocationError(hubMethodInvocationMessage, connection, ex.Message);
+                    //_logger.SendingResult(hubMethodInvocationMessage.InvocationId, methodExecutor.MethodReturnType.FullName);
+                    await SendMessageAsync(connection,
+                        CompletionMessage.WithResult(hubMethodInvocationMessage.InvocationId, result));
                 }
-                finally
-                {
-                    hubActivator.Release(hub);
-                }
+            }
+            catch (TargetInvocationException ex)
+            {
+                //_logger.FailedInvokingHubMethod(hubMethodInvocationMessage.Target, ex);
+                await SendInvocationError(hubMethodInvocationMessage, connection, ex.InnerException.Message);
+            }
+            catch (Exception ex)
+            {
+                //_logger.FailedInvokingHubMethod(hubMethodInvocationMessage.Target, ex);
+                await SendInvocationError(hubMethodInvocationMessage, connection, ex.Message);
+            }
+            finally
+            {
+                hub?.Dispose();
             }
         }
 
@@ -296,21 +291,21 @@ namespace Microsoft.AspNetCore.SignalR
             }
             catch (Exception ex)
             {
-                //// If the streaming method was canceled we don't want to send a HubException message - this is not an error case
-                //if (!(ex is OperationCanceledException && connection.ActiveRequestCancellationSources.TryGetValue(invocationId, out var cts)
-                //    && cts.IsCancellationRequested))
-                //{
-                //    error = ex.Message;
-                //}
+                // If the streaming method was canceled we don't want to send a HubException message - this is not an error case
+                if (!(ex is OperationCanceledException && connection.ActiveRequestCancellationSources.TryGetValue(invocationId, out var cts)
+                    && cts.IsCancellationRequested))
+                {
+                    error = ex.Message;
+                }
             }
             finally
             {
                 await SendMessageAsync(connection, new CompletionMessage(invocationId, error: error, result: null, hasResult: false));
 
-                //if (connection.ActiveRequestCancellationSources.TryRemove(invocationId, out var cts))
-                //{
-                //    cts.Dispose();
-                //}
+                if (connection.ActiveRequestCancellationSources.TryRemove(invocationId, out var cts))
+                {
+                    cts.Dispose();
+                }
             }
         }
 

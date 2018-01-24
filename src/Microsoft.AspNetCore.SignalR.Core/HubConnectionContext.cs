@@ -62,12 +62,12 @@ namespace Microsoft.AspNetCore.SignalR
 
         public string UserIdentifier { get; private set; }
 
-        internal virtual Channel<HubMessage> Output { get; set; }
+        public virtual Channel<HubMessage> Output { get; set; }
 
         internal ExceptionDispatchInfo AbortException { get; private set; }
 
         // Currently used only for streaming methods
-        internal ConcurrentDictionary<string, CancellationTokenSource> ActiveRequestCancellationSources { get; } = new ConcurrentDictionary<string, CancellationTokenSource>();
+        public ConcurrentDictionary<string, CancellationTokenSource> ActiveRequestCancellationSources { get; } = new ConcurrentDictionary<string, CancellationTokenSource>();
 
         public async Task WriteAsync(HubInvocationMessage message)
         {
