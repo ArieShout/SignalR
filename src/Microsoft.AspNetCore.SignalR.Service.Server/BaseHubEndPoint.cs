@@ -279,8 +279,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         private async Task RunHubAsync(string hubName, ServiceHubConnectionContext connection)
         {
-            await OnHubConnectedAsync(hubName, connection);
-
+            if (!(typeof(THub).Equals(typeof(ClientHub)) && _hubOptions.EchoAll4TroubleShooting))
+            {
+                await OnHubConnectedAsync(hubName, connection);
+            }
             try
             {
                 await DispatchMessagesAsync(hubName, connection);
@@ -292,7 +294,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
                 throw;
             }
 
-            await OnHubDisconnectedAsync(hubName, connection, null);
+            if (!(typeof(THub).Equals(typeof(ClientHub)) && _hubOptions.EchoAll4TroubleShooting))
+            {
+                await OnHubDisconnectedAsync(hubName, connection, null);
+            }
         }
 
         private async Task SendClientMsgBackDirectly(ServiceHubConnectionContext connection, HubMessage hubMessage)
