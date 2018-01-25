@@ -54,8 +54,10 @@ namespace Latency
                     bool.TryParse(Configuration["SignalRService:EchoAll4TroubleShooting"], out var v) && v : false;
 
             });
-            //services.AddSignalRService(hubOption => { hubOption.ConsoleLogLevel = logLevel; });
-	    services.AddSingleton(typeof(IUserTracker<>), typeof(InMemoryUserTracker<>));
+            var latencyOption = new LatencyOption();
+            latencyOption.ConcurrentClientCount = Configuration.GetValue<int>("SignalRService:ConcurrentClientCount");
+            services.AddSingleton(typeof(LatencyOption), latencyOption);
+            services.AddSingleton(typeof(IUserTracker<>), typeof(InMemoryUserTracker<>));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -6,19 +6,20 @@ namespace Latency
 {
     public class Chat : HubWithPresence
     {
-        public Chat(IUserTracker<Chat> userTracker)
+        private readonly LatencyOption _latencyOption;
+        public Chat(IUserTracker<Chat> userTracker, LatencyOption latencyOption)
             : base(userTracker)
         {
+            _latencyOption = latencyOption;
         }
 
         public override Task OnConnectedAsync()
         {
             Task t = OnUsersJoined();
-	    //Console.WriteLine("+++connections: " + GetUsersOnline());
-	    if (GetUsersOnline() == 4000)
-	    {
-		    Clients.All.InvokeAsync("start", "start");//GetUsersOnline());
-	    }
+	        if (GetUsersOnline() == _latencyOption.ConcurrentClientCount)
+	        {
+		        Clients.All.InvokeAsync("start", "start");
+	        }
             return t;
         }
 
@@ -34,10 +35,6 @@ namespace Latency
 
         public void echo(string name, string message)
         {
-	    /*
-            long DatetimeMinTimeTicks = (new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).Ticks;
-            long timestamp = (DateTime.Now.ToUniversalTime().Ticks - DatetimeMinTimeTicks) / 10000;
-	    */
             Clients.Client(Context.ConnectionId).InvokeAsync("echo", name, message);
         }
     }
