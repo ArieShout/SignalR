@@ -32,6 +32,18 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         public new string UserIdentifier { get; internal set; }
 
+        public override async Task WriteAsync(HubInvocationMessage hubMessage)
+        {
+            var buffer = ProtocolReaderWriter.WriteMessage(hubMessage);
+            while (await _connectionContext.Transport.Writer.WaitToWriteAsync())
+            {
+                if (_connectionContext.Transport.Writer.TryWrite(buffer))
+                {
+                    break;
+                }
+            }
+        }
+
         internal void Abort(Exception exception)
         {
             AbortException = ExceptionDispatchInfo.Capture(exception);

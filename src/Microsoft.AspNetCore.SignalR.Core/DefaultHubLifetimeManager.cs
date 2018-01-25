@@ -147,15 +147,10 @@ namespace Microsoft.AspNetCore.SignalR
             return Task.CompletedTask;
         }
 
-        private async Task WriteAsync(HubConnectionContext connection, HubInvocationMessage hubMessage)
+        private Task WriteAsync(HubConnectionContext connection, HubInvocationMessage hubMessage)
         {
-            while (await connection.Output.WaitToWriteAsync())
-            {
-                if (connection.Output.TryWrite(hubMessage))
-                {
-                    break;
-                }
-            }
+            _ = connection.WriteAsync(hubMessage);
+            return Task.CompletedTask;
         }
 
         private string GetInvocationId()

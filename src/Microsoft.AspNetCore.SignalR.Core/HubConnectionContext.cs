@@ -71,6 +71,16 @@ namespace Microsoft.AspNetCore.SignalR
             Task.Factory.StartNew(_abortedCallback, this);
         }
 
+        public virtual async Task WriteAsync(HubInvocationMessage hubMessage)
+        {
+            while (await Output.WaitToWriteAsync())
+            {
+                if (Output.TryWrite(hubMessage))
+                {
+                    break;
+                }
+            }
+        }
         public string UserIdentifier { get; internal set; }
 
         internal void Abort(Exception exception)
