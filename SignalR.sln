@@ -108,6 +108,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ChatFullDemo", "samples\Cha
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LatencyService", "samples\LatencyService\LatencyService.csproj", "{9B7C289B-B3B3-421F-B541-4505848CADE8}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Latency", "samples\Latency\Latency.csproj", "{1DD0A6AF-6C7F-4424-BA95-F845C63177A7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -250,6 +252,10 @@ Global
 		{9B7C289B-B3B3-421F-B541-4505848CADE8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9B7C289B-B3B3-421F-B541-4505848CADE8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9B7C289B-B3B3-421F-B541-4505848CADE8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1DD0A6AF-6C7F-4424-BA95-F845C63177A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1DD0A6AF-6C7F-4424-BA95-F845C63177A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1DD0A6AF-6C7F-4424-BA95-F845C63177A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1DD0A6AF-6C7F-4424-BA95-F845C63177A7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -290,6 +296,7 @@ Global
 		{82F7DC2D-C781-49A0-B393-9DACCC57E848} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
 		{CD9539A0-1FD9-4DF7-A05A-CFC1E4046C2A} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
 		{9B7C289B-B3B3-421F-B541-4505848CADE8} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
+		{1DD0A6AF-6C7F-4424-BA95-F845C63177A7} = {C4BC9889-B49F-41B6-806B-F84941B2549B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7945A4E4-ACDB-4F6E-95CA-6AC6E7C2CD59}
