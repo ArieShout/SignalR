@@ -113,9 +113,9 @@ namespace Microsoft.AspNetCore.Sockets.Internal.Transports
             // REVIEW: This code was copied from the client, it's highly unoptimized at the moment (especially
             // for server logic)
             var incomingMessage = new List<ArraySegment<byte>>();
+            int bufferSize = _connection.GetHttpContext().Request.Path.StartsWithSegments("/server") ? 8192 : 4096;
             while (true)
             {
-                const int bufferSize = 4096;
                 var totalBytes = 0;
                 WebSocketReceiveResult receiveResult;
                 do
