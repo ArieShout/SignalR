@@ -264,7 +264,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     _logger.UnknownHubMethod(message.Target);
                     await SendMessageAsync(hubConnContext, CompletionMessage.WithError(
                         message.InvocationId,
-                        $"Unknown hub method '{message.Target}'"));
+                        $"Unknown hub method '{message.Target}'").AddConnectionId(connectionId));
                 }
             }
             catch (Exception e)
@@ -342,7 +342,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     _logger.StreamingMethodCalledWithInvoke(hubMethodInvocationMessage);
                     await SendMessageAsync(connection, CompletionMessage.WithError(
                         hubMethodInvocationMessage.InvocationId,
-                        $"The client attempted to invoke the streaming '{hubMethodInvocationMessage.Target}' method in a non-streaming fashion."));
+                        $"The client attempted to invoke the streaming '{hubMethodInvocationMessage.Target}' method in a non-streaming fashion.")
+                        .AddConnectionId(hubMethodInvocationMessage.GetConnectionId()));
                 }
 
                 return false;
@@ -352,7 +353,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             {
                 _logger.NonStreamingMethodCalledWithStream(hubMethodInvocationMessage);
                 await SendMessageAsync(connection, CompletionMessage.WithError(hubMethodInvocationMessage.InvocationId,
-                    $"The client attempted to invoke the non-streaming '{hubMethodInvocationMessage.Target}' method in a streaming fashion."));
+                    $"The client attempted to invoke the non-streaming '{hubMethodInvocationMessage.Target}' method in a streaming fashion.")
+                    .AddConnectionId(hubMethodInvocationMessage.GetConnectionId()));
 
                 return false;
             }
