@@ -79,7 +79,8 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private static InvocationMessage CreateInvocationMessage(Unpacker unpacker, IInvocationBinder binder)
         {
             var invocationId = ReadInvocationId(unpacker);
-            var nonBlocking = ReadBoolean(unpacker, "nonBlocking");
+            bool nonBlocking = false;
+            //var nonBlocking = ReadBoolean(unpacker, "nonBlocking");
             IDictionary<string, string> metadata = null;
             if (_forService)
             {
@@ -233,15 +234,15 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         {
             if (_forService)
             {
-                packer.PackArrayHeader(6);
+                packer.PackArrayHeader(5);
             }
             else
             {
-                packer.PackArrayHeader(5);
+                packer.PackArrayHeader(4);
             }
             packer.Pack(HubProtocolConstants.InvocationMessageType);
             packer.PackString(invocationMessage.InvocationId);
-            packer.Pack(invocationMessage.NonBlocking);
+            //packer.Pack(invocationMessage.NonBlocking);
             if (_forService)
             {
                 packer.PackDictionary<string, string>(invocationMessage.Metadata);
