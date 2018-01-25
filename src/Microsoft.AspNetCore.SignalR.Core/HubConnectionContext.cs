@@ -57,6 +57,16 @@ namespace Microsoft.AspNetCore.SignalR
 
         // Currently used only for streaming methods
         internal ConcurrentDictionary<string, CancellationTokenSource> ActiveRequestCancellationSources { get; } = new ConcurrentDictionary<string, CancellationTokenSource>();
+        public virtual async Task WriteAsync(HubInvocationMessage hubMessage)
+        {
+            while (await Output.WaitToWriteAsync())
+            {
+                if (Output.TryWrite(hubMessage))
+                {
+                    break;
+                }
+            }
+        }
 
         public virtual void Abort()
         {
