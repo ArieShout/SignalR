@@ -7,6 +7,6 @@ namespace Latency
 {
     public class LatencyOption
     {
-        public int ConcurrentClientCount { get; set }
+        public int ConcurrentClientCount;
     }
 }
