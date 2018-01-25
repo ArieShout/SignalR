@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR.Internal.Protocol;
-
+using Microsoft.AspNetCore.SignalR.Service.Core;
 namespace Latency
 {
     public class Startup
@@ -36,16 +36,23 @@ namespace Latency
             {
                 protoType = ProtocolType.Text;
             }
+            var messageType = Configuration["SignalRService:MessagePassingType"];
+            if (!Enum.TryParse<MessagePassingType>(messageType, true ,out var msgType))
+            {
+                msgType = MessagePassingType.AsyncCall;
+            }
             services.AddSignalRService(hubOption => {
                 hubOption.ConsoleLogLevel = logLevel;
                 hubOption.ConnectionNumber = Configuration.GetValue<int>("SignalRService:ServiceConnectionNo");
                 hubOption.ProtocolType = protoType;
+                hubOption.MessagePassingType = msgType;
                 hubOption.ReceiveBufferSize = Configuration.GetValue<int>("SignalRService:ReceiveBufferSize");
                 hubOption.SendBufferSize = Configuration.GetValue<int>("SignalRService:SendBufferSize");
                 hubOption.EnableMetrics = Configuration["SignalRService:EnableMetrics"] != null ?
                     bool.TryParse(Configuration["SignalRService:EnableMetrics"], out var value) && value : false;
                 hubOption.EchoAll4TroubleShooting = Configuration["SignalRService:EchoAll4TroubleShooting"] != null ?
                     bool.TryParse(Configuration["SignalRService:EchoAll4TroubleShooting"], out var v) && v : false;
+
             });
             //services.AddSignalRService(hubOption => { hubOption.ConsoleLogLevel = logLevel; });
 	    services.AddSingleton(typeof(IUserTracker<>), typeof(InMemoryUserTracker<>));
