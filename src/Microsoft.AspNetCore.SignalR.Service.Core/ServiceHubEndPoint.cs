@@ -109,7 +109,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     .WithEnableMetrics(_options.EnableMetrics)
                     .WithIndex(i)
                     .WithHubProtocol(_options.ProtocolType == ProtocolType.Binary ?
-                        new MessagePackHubProtocol() : (IHubProtocol)new JsonHubProtocol());
+                        new MessagePackHubProtocol(true) : (IHubProtocol)new JsonHubProtocol());
                 if (_options.MessagePassingType == MessagePassingType.Channel)
                 {
                     builder.WithMessageQueue(requestHandlingQ);
