@@ -74,8 +74,9 @@ namespace Microsoft.AspNetCore.SignalR.Client
             _protocol = protocol;
             _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
             _logger = _loggerFactory.CreateLogger<HubConnection>();
-            _connection.OnReceived((data, state) => ((HubConnection)state).OnDataReceivedAsync(data), this);
-            
+            ((HttpConnection)_connection).OnReceivedCallback((data, state) => ((HubConnection)state).OnDataReceivedAsync(data), this);
+            //_connection.OnReceived((data, state) => ((HubConnection)state).OnDataReceivedAsync(data), this);
+
             _output = Channel.CreateUnbounded<HubMessage>();
             async Task WriteToTransport()
             {

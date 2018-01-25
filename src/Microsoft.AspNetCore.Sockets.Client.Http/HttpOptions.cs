@@ -15,5 +15,6 @@ namespace Microsoft.AspNetCore.Sockets.Client.Http
 
         public int RecvBufferSize { get; set; } = 4096;
         public int SendBufferSize { get; set; } = 4096;
+        public bool NoTaskQueue { get; set; } = false;
     }
 }

@@ -44,7 +44,8 @@ namespace Microsoft.AspNetCore.SignalR.Client
                     Headers = headers != null ? new ReadOnlyDictionary<string, string>(headers) : null,
                     JwtBearerTokenFactory = hubConnectionBuilder.GetJwtBearerTokenFactory(),
                     RecvBufferSize = recvSize < 4096 ? 4096 : recvSize,
-                    SendBufferSize = sendSize < 4096 ? 4096 : sendSize
+                    SendBufferSize = sendSize < 4096 ? 4096 : sendSize,
+                    NoTaskQueue = true
                 };
 
                 return new HttpConnection(url,

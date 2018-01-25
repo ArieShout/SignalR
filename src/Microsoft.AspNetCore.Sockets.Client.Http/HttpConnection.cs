@@ -45,7 +45,7 @@ namespace Microsoft.AspNetCore.Sockets.Client
         private readonly List<ReceiveCallback> _callbacks = new List<ReceiveCallback>();
         private readonly TransportType _requestedTransportType = TransportType.All;
         private Stats _stats;
-
+        private ReceiveCallback _callback;
         public Uri Url { get; }
 
         public IFeatureCollection Features { get; } = new FeatureCollection();
@@ -103,6 +103,10 @@ namespace Microsoft.AspNetCore.Sockets.Client
 
         public async Task StartAsync() => await StartAsyncCore().ForceAsync();
 
+        public void OnReceivedCallback(Func<byte[], object, Task> callback, object state)
+        {
+            _callback = new ReceiveCallback(callback, state);
+        }
         private Task StartAsyncCore()
         {
             if (Interlocked.CompareExchange(ref _connectionState, ConnectionState.Connecting, ConnectionState.Initial)
@@ -365,30 +369,37 @@ namespace Microsoft.AspNetCore.Sockets.Client
                         {
                             _stats.BytesRead(buffer.Length);
                         }
-                        _ = _eventQueue.Enqueue(async () =>
+                        if (_httpOptions.NoTaskQueue)
                         {
-                            _logger.RaiseReceiveEvent(_connectionId);
-
-                            // Copying the callbacks to avoid concurrency issues
-                            ReceiveCallback[] callbackCopies;
-                            lock (_callbacks)
+                            _ = _callback.InvokeAsync(buffer);
+                        }
+                        else
+                        {
+                            _ = _eventQueue.Enqueue(async () =>
                             {
-                                callbackCopies = new ReceiveCallback[_callbacks.Count];
-                                _callbacks.CopyTo(callbackCopies);
-                            }
+                                _logger.RaiseReceiveEvent(_connectionId);
 
-                            foreach (var callbackObject in callbackCopies)
-                            {
-                                try
+                                // Copying the callbacks to avoid concurrency issues
+                                ReceiveCallback[] callbackCopies;
+                                lock (_callbacks)
                                 {
-                                    await callbackObject.InvokeAsync(buffer);
+                                    callbackCopies = new ReceiveCallback[_callbacks.Count];
+                                    _callbacks.CopyTo(callbackCopies);
                                 }
-                                catch (Exception ex)
+
+                                foreach (var callbackObject in callbackCopies)
                                 {
-                                    _logger.ExceptionThrownFromCallback(_connectionId, nameof(OnReceived), ex);
+                                    try
+                                    {
+                                        await callbackObject.InvokeAsync(buffer);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _logger.ExceptionThrownFromCallback(_connectionId, nameof(OnReceived), ex);
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
                     else
                     {
