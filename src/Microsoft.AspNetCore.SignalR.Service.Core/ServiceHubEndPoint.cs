@@ -107,6 +107,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     .WithJwtBearer(() => _authHelper.GetServerToken(config))
                     .WithStat(_statManager.Stat())
                     .WithEnableMetrics(_options.EnableMetrics)
+                    .WithIndex(i)
                     .WithHubProtocol(_options.ProtocolType == ProtocolType.Binary ?
                         new MessagePackHubProtocol() : (IHubProtocol)new JsonHubProtocol());
                 if (_options.MessagePassingType == MessagePassingType.Channel)
