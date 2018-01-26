@@ -129,7 +129,8 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             foreach (var hubMethod in _methods.Keys)
             {
                 On<HubConnectionMessageWrapper>(hubMethod,
-                    async invocationMessage => { await HandleHubCallAsync(invocationMessage); });
+                    async invocationMessage => { await HandleHubCallAsync(invocationMessage, 
+                        (HubInvocationMessage)invocationMessage.HubMethodInvocationMessage is StreamItemMessage); });
             }
         }
 
@@ -225,9 +226,9 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         }
 
         private async Task SendCompletionMessage(HubMethodInvocationMessage origRequest,
-            HubConnectionContext serviceConnection)
+            HubConnectionContext serviceConnection, object result)
         {
-            var completeMessage = CompletionMessage.Empty(origRequest.InvocationId);
+            var completeMessage = CompletionMessage.WithResult(origRequest.InvocationId, result);
             completeMessage.AddMetadata(origRequest.Metadata);
             if (_options.EnableMetrics)
             {
@@ -252,7 +253,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             _connections.Add(hubConnContext);
             await _lifetimeMgr.OnConnectedAsync(hubConnContext);
             await HubOnConnectedAsync(hubConnContext);
-            await SendCompletionMessage(message, hubConnContext);
+            await SendCompletionMessage(message, hubConnContext, null);
         }
 
         private async Task HandleOnDisconnectedAsync(HubConnectionMessageWrapper messageWrapper)
@@ -262,18 +263,18 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             var hubConnContext = _connections[connectionId];
             await HubOnDisconnectedAsync(hubConnContext);
             await _lifetimeMgr.OnDisconnectedAsync(hubConnContext);
-            await SendCompletionMessage(message, hubConnContext);
+            await SendCompletionMessage(message, hubConnContext, null);
             _connections.Remove(hubConnContext);
         }
 
-        private async Task HandleHubCallAsync(HubConnectionMessageWrapper messageWrapper)
+        private async Task HandleHubCallAsync(HubConnectionMessageWrapper messageWrapper, bool isStreamedInvocation)
         {
             if (_options.EchoAll4TroubleShooting)
             {
                 messageWrapper.HubMethodInvocationMessage.AddAction("InvokeConnectionAsync");
                 await _hubConnections[messageWrapper.HubConnectionIndex].SendHubMessage(messageWrapper.HubMethodInvocationMessage);
                 await SendCompletionMessage(messageWrapper.HubMethodInvocationMessage, 
-                    _connections[messageWrapper.HubMethodInvocationMessage.GetConnectionId()]);
+                    _connections[messageWrapper.HubMethodInvocationMessage.GetConnectionId()], null);
                 return;
             }
             var message = messageWrapper.HubMethodInvocationMessage;
@@ -284,7 +285,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                 if (_methods.TryGetValue(message.Target, out var descriptor))
                 {
                     // TODO. support StreamItem 
-                    await Invoke(descriptor, hubConnContext, message, false);
+                    await Invoke(descriptor, hubConnContext, message, isStreamedInvocation);
                 }
                 else
                 {
@@ -476,7 +477,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     {
                         _logger.SendingResult(message.InvocationId,
                             methodExecutor.MethodReturnType.FullName);
-                        await SendCompletionMessage(message, connection);
+                        await SendCompletionMessage(message, connection, result);
                     }
                 }
                 catch (TargetInvocationException ex)
@@ -616,7 +617,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     await HandleOnDisconnectedAsync(hubMessage);
                     break;
                 default:
-                    await HandleHubCallAsync(hubMessage);
+                    await HandleHubCallAsync(hubMessage, isStreamedInvocation);
                     break;
             }
         }
