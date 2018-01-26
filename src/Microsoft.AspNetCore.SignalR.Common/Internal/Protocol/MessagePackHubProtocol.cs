@@ -158,6 +158,11 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private static CompletionMessage CreateCompletionMessage(Unpacker unpacker, IInvocationBinder binder)
         {
             var invocationId = ReadInvocationId(unpacker);
+            IDictionary<string, string> metadata = null;
+            if (_forService)
+            {
+                metadata = ReadMetedata(unpacker, "metaData");
+            }
             var resultKind = ReadInt32(unpacker, "resultKind");
 
             string error = null;
@@ -180,7 +185,10 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                 default:
                     throw new FormatException("Invalid invocation result kind.");
             }
-
+            if (_forService)
+            {
+                return new CompletionMessage(invocationId, error, result, hasResult).AddMetadata(metadata);
+            }
             return new CompletionMessage(invocationId, error, result, hasResult);
         }
 
@@ -283,6 +291,10 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
             }
             packer.Pack(HubProtocolConstants.CompletionMessageType);
             packer.PackString(completionMessage.InvocationId);
+            if (_forService)
+            {
+                packer.PackDictionary<string, string>(completionMessage.Metadata);
+            }
             packer.Pack(resultKind);
             switch (resultKind)
             {
@@ -292,10 +304,6 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                 case NonVoidResult:
                     packer.PackObject(completionMessage.Result, _serializationContext);
                     break;
-            }
-            if (_forService)
-            {
-                packer.PackDictionary<string, string>(completionMessage.Metadata);
             }
         }
 

@@ -225,9 +225,9 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         }
 
         private async Task SendCompletionMessage(HubMethodInvocationMessage origRequest,
-            object result, HubConnectionContext serviceConnection)
+            HubConnectionContext serviceConnection)
         {
-            var completeMessage = CompletionMessage.WithResult(origRequest.InvocationId, result);
+            var completeMessage = CompletionMessage.Empty(origRequest.InvocationId);
             completeMessage.AddMetadata(origRequest.Metadata);
             if (_options.EnableMetrics)
             {
@@ -252,7 +252,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             _connections.Add(hubConnContext);
             await _lifetimeMgr.OnConnectedAsync(hubConnContext);
             await HubOnConnectedAsync(hubConnContext);
-            await SendCompletionMessage(message, "", hubConnContext);
+            await SendCompletionMessage(message, hubConnContext);
         }
 
         private async Task HandleOnDisconnectedAsync(HubConnectionMessageWrapper messageWrapper)
@@ -262,7 +262,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             var hubConnContext = _connections[connectionId];
             await HubOnDisconnectedAsync(hubConnContext);
             await _lifetimeMgr.OnDisconnectedAsync(hubConnContext);
-            await SendCompletionMessage(message, "", hubConnContext);
+            await SendCompletionMessage(message, hubConnContext);
             _connections.Remove(hubConnContext);
         }
 
@@ -272,7 +272,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             {
                 messageWrapper.HubMethodInvocationMessage.AddAction("InvokeConnectionAsync");
                 await _hubConnections[messageWrapper.HubConnectionIndex].SendHubMessage(messageWrapper.HubMethodInvocationMessage);
-                await SendCompletionMessage(messageWrapper.HubMethodInvocationMessage, "", 
+                await SendCompletionMessage(messageWrapper.HubMethodInvocationMessage, 
                     _connections[messageWrapper.HubMethodInvocationMessage.GetConnectionId()]);
                 return;
             }
@@ -476,7 +476,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     {
                         _logger.SendingResult(message.InvocationId,
                             methodExecutor.MethodReturnType.FullName);
-                        await SendCompletionMessage(message, "", connection);
+                        await SendCompletionMessage(message, connection);
                     }
                 }
                 catch (TargetInvocationException ex)
