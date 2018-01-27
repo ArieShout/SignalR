@@ -253,7 +253,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             _connections.Add(hubConnContext);
             await _lifetimeMgr.OnConnectedAsync(hubConnContext);
             await HubOnConnectedAsync(hubConnContext);
-            await SendCompletionMessage(message, hubConnContext, null);
+            if (!_options.DontSendComplete)
+            {
+                await SendCompletionMessage(message, hubConnContext, null);
+            }
         }
 
         private async Task HandleOnDisconnectedAsync(HubConnectionMessageWrapper messageWrapper)
@@ -263,7 +266,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             var hubConnContext = _connections[connectionId];
             await HubOnDisconnectedAsync(hubConnContext);
             await _lifetimeMgr.OnDisconnectedAsync(hubConnContext);
-            await SendCompletionMessage(message, hubConnContext, null);
+            if (!_options.DontSendComplete)
+            {
+                await SendCompletionMessage(message, hubConnContext, null);
+            }
             _connections.Remove(hubConnContext);
         }
 
@@ -273,8 +279,11 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
             {
                 messageWrapper.HubMethodInvocationMessage.AddAction("InvokeConnectionAsync");
                 await _hubConnections[messageWrapper.HubConnectionIndex].SendHubMessage(messageWrapper.HubMethodInvocationMessage);
-                await SendCompletionMessage(messageWrapper.HubMethodInvocationMessage, 
+                if (!_options.DontSendComplete)
+                {
+                    await SendCompletionMessage(messageWrapper.HubMethodInvocationMessage,
                     _connections[messageWrapper.HubMethodInvocationMessage.GetConnectionId()], null);
+                }
                 return;
             }
             var message = messageWrapper.HubMethodInvocationMessage;
@@ -477,7 +486,10 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     {
                         _logger.SendingResult(message.InvocationId,
                             methodExecutor.MethodReturnType.FullName);
-                        await SendCompletionMessage(message, connection, result);
+                        if (!_options.DontSendComplete)
+                        {
+                            await SendCompletionMessage(message, connection, result);
+                        }
                     }
                 }
                 catch (TargetInvocationException ex)

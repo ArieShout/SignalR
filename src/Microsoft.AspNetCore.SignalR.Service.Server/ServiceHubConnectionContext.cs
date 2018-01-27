@@ -16,10 +16,13 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
     {
         private readonly ConnectionContext _connectionContext;
         private readonly TaskCompletionSource<object> _abortCompletedTcs = new TaskCompletionSource<object>();
-
-        public ServiceHubConnectionContext(ChannelWriter<HubMessage> output, ConnectionContext connectionContext) : base(output, connectionContext)
+        private bool _disableDupOutputChannel;
+        public ServiceHubConnectionContext(ChannelWriter<HubMessage> output,
+            ConnectionContext connectionContext,
+            bool disableDupOutputChannel) : base(output, connectionContext)
         {
             _connectionContext = connectionContext;
+            _disableDupOutputChannel = disableDupOutputChannel;
         }
 
         // Used by the HubEndPoint only
@@ -34,12 +37,25 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
 
         public override async Task WriteAsync(HubInvocationMessage hubMessage)
         {
-            var buffer = ProtocolReaderWriter.WriteMessage(hubMessage);
-            while (await _connectionContext.Transport.Writer.WaitToWriteAsync())
+            if (_disableDupOutputChannel)
             {
-                if (_connectionContext.Transport.Writer.TryWrite(buffer))
+                var buffer = ProtocolReaderWriter.WriteMessage(hubMessage);
+                while (await _connectionContext.Transport.Writer.WaitToWriteAsync())
                 {
-                    break;
+                    if (_connectionContext.Transport.Writer.TryWrite(buffer))
+                    {
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                while (await Output.WaitToWriteAsync())
+                {
+                    if (Output.TryWrite(hubMessage))
+                    {
+                        break;
+                    }
                 }
             }
         }

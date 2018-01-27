@@ -118,7 +118,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Server
             // all the relevant state for a SignalR Hub connection.
             connection.Features.Set<IHubFeature>(new HubFeature());
 
-            var connectionContext = new ServiceHubConnectionContext(output, connection);
+            var connectionContext = new ServiceHubConnectionContext(output, connection, _hubOptions.DisableDupOutputChannel);
 
             if (!await ProcessNegotiate(connectionContext))
             {

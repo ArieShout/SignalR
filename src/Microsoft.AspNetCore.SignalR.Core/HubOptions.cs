@@ -15,5 +15,7 @@ namespace Microsoft.AspNetCore.SignalR
         public TimeSpan NegotiateTimeout { get; set; } = TimeSpan.FromSeconds(5);
         public bool MarkTimestampInCritialPhase { get; set; } = false;
         public bool EchoAll4TroubleShooting { get; set; } = false;
+
+        public bool DisableDupOutputChannel { get; set; } = false;
     }
 }

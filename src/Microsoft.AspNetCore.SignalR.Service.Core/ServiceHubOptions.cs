@@ -27,6 +27,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
         public bool EchoAll4TroubleShooting { get; set; } = false;
         public bool MarkTimestampInCritialPhase { get; set; } = false;
 
+        public bool DontSendComplete { get; set; } = false; // For performance debug purpose
         public MessagePassingType MessagePassingType { get; set; } = MessagePassingType.AsyncCall;
         // TODO: selectively pass claims to SignalR service
         public Func<HttpContext, IEnumerable<Claim>> ClaimProvider { get; set; } =

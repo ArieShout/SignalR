@@ -55,6 +55,8 @@ namespace SignalRServiceSample
                         bool.TryParse(Configuration["Diagnostic:EnableMetrics"], out var value) && value : false;
                     options.EchoAll4TroubleShooting = Configuration["Diagnostic:EchoAll4TroubleShooting"] != null ?
                         bool.TryParse(Configuration["Diagnostic:EchoAll4TroubleShooting"], out var v) && v : false;
+                    options.DisableDupOutputChannel = Configuration["Diagnostic:DisableDupOutputChannel"] != null ?
+                        bool.TryParse(Configuration["Diagnostic:DisableDupOutputChannel"], out var d) && d : false;
                 });
 
             var redisConnStr = $"{Configuration["Redis:ConnectionString"]}";
