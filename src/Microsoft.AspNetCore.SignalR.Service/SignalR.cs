@@ -97,12 +97,12 @@ namespace Microsoft.AspNetCore.SignalR
             );
         }
 
-        //public ServiceClient<THub> CreateServiceClient<THub>() where THub : Hub
-        //{
-        //    var serviceClient = ServiceProvider.GetRequiredService<ServiceClient<THub>>();
-        //    serviceClient.UseService(this);
-        //    return serviceClient;
-        //}
+        public ServiceClient<THub> CreateServiceClient<THub>() where THub : Hub
+        {
+            var serviceClient = ServiceProvider.GetRequiredService<ServiceClient<THub>>();
+            serviceClient.UseService(this);
+            return serviceClient;
+        }
 
         public IHubClients<IServiceClientProxy> CreateHubClientsProxy<THub>() where THub : Hub
         {
@@ -151,6 +151,7 @@ namespace Microsoft.AspNetCore.SignalR
                     .AddSingleton(typeof(IHubContext<>), typeof(HubContext<>))
                     .AddSingleton(typeof(IHubInvoker<>), typeof(ServiceHubInvoker<>))
                     .AddTransient(typeof(IHubActivator<>), typeof(DefaultHubActivator<>))
+                    .AddTransient(typeof(ServiceClient<>))
                     .BuildServiceProvider());
 
         internal static IServiceProvider ServiceProvider

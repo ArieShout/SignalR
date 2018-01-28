@@ -2,18 +2,19 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.SignalR;
+using static Microsoft.AspNetCore.SignalR.SignalR;
 
-namespace Microsoft.AspNetCore.SignalR.Service
+namespace Microsoft.AspNetCore.Builder
 {
-    public static class AppBuilderExtensions
+    public static class ApplicationBuilderExtensions
     {
         public static IApplicationBuilder UseSignalRService(this IApplicationBuilder app, string connectionString, Action<ServiceClientBuilder> configure)
         {
             // Assign only once
-            SignalR.ServiceProvider = app.ApplicationServices;
+            ServiceProvider = app.ApplicationServices;
 
-            var signalr = SignalR.Parse(connectionString);
+            var signalr = Parse(connectionString);
             var builder = new ServiceClientBuilder(app.ApplicationServices, signalr);
             configure(builder);
 
