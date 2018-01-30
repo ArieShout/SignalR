@@ -37,14 +37,15 @@ namespace Microsoft.AspNetCore.SignalR
         private Task _writingTask = Task.CompletedTask;
         private long _lastSendTimestamp = Stopwatch.GetTimestamp();
         private byte[] _pingMessage;
-
-        public HubConnectionContext(ConnectionContext connectionContext, TimeSpan keepAliveInterval, ILoggerFactory loggerFactory)
+        private bool _noOutputChannel;
+        public HubConnectionContext(ConnectionContext connectionContext, TimeSpan keepAliveInterval, ILoggerFactory loggerFactory, bool noOutputChannel = false)
         {
             Output = Channel.CreateUnbounded<HubMessage>();
             _connectionContext = connectionContext;
             _logger = loggerFactory.CreateLogger<HubConnectionContext>();
             ConnectionAbortedToken = _connectionAbortedTokenSource.Token;
             _keepAliveDuration = (int)keepAliveInterval.TotalMilliseconds * (Stopwatch.Frequency / 1000);
+            _noOutputChannel = noOutputChannel;
         }
 
         public virtual CancellationToken ConnectionAbortedToken { get; }
@@ -80,11 +81,26 @@ namespace Microsoft.AspNetCore.SignalR
 
         public async Task WriteAsync(HubInvocationMessage message)
         {
-            while (await Output.Writer.WaitToWriteAsync())
+            if (!_noOutputChannel)
             {
-                if (Output.Writer.TryWrite(message))
+                while (await Output.Writer.WaitToWriteAsync())
                 {
-                    return;
+                    if (Output.Writer.TryWrite(message))
+                    {
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                var buffer = ProtocolReaderWriter.WriteMessage(message);
+                while (await _connectionContext.Transport.Writer.WaitToWriteAsync())
+                {
+                    if (_connectionContext.Transport.Writer.TryWrite(buffer))
+                    {
+                        Interlocked.Exchange(ref _lastSendTimestamp, Stopwatch.GetTimestamp());
+                        break;
+                    }
                 }
             }
         }
@@ -190,27 +206,30 @@ namespace Microsoft.AspNetCore.SignalR
                 _connectionContext.Features.Get<IConnectionHeartbeatFeature>()?.OnHeartbeat(state => ((HubConnectionContext)state).KeepAliveTick(), this);
             }
 
-            try
+            if (!_noOutputChannel)
             {
-                while (await Output.Reader.WaitToReadAsync())
+                try
                 {
-                    while (Output.Reader.TryRead(out var hubMessage))
+                    while (await Output.Reader.WaitToReadAsync())
                     {
-                        var buffer = ProtocolReaderWriter.WriteMessage(hubMessage);
-                        while (await _connectionContext.Transport.Writer.WaitToWriteAsync())
+                        while (Output.Reader.TryRead(out var hubMessage))
                         {
-                            if (_connectionContext.Transport.Writer.TryWrite(buffer))
+                            var buffer = ProtocolReaderWriter.WriteMessage(hubMessage);
+                            while (await _connectionContext.Transport.Writer.WaitToWriteAsync())
                             {
-                                Interlocked.Exchange(ref _lastSendTimestamp, Stopwatch.GetTimestamp());
-                                break;
+                                if (_connectionContext.Transport.Writer.TryWrite(buffer))
+                                {
+                                    Interlocked.Exchange(ref _lastSendTimestamp, Stopwatch.GetTimestamp());
+                                    break;
+                                }
                             }
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Abort(ex);
+                catch (Exception ex)
+                {
+                    Abort(ex);
+                }
             }
         }
 

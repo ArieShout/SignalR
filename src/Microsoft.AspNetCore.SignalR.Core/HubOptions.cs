@@ -24,5 +24,7 @@ namespace Microsoft.AspNetCore.SignalR
         /// functionality because of the polling mechanism. 
         /// </remarks>
         public TimeSpan KeepAliveInterval { get; set; } = DefaultKeepAliveInterval;
+
+        public bool NoOutputChannel { get; set; } = false;
     }
 }
