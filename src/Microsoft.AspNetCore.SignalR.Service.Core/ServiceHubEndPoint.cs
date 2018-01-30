@@ -108,7 +108,7 @@ namespace Microsoft.AspNetCore.SignalR.Service.Core
                     .WithMessageQueue(requestHandlingQ)
                     .WithStat(_statManager.Stat())
                     .WithHubProtocol(_options.ProtocolType == ProtocolType.Binary ?
-                        new MessagePackHubProtocol() : (IHubProtocol)new JsonHubProtocol())
+                        new MessagePackHubProtocol(true) : (IHubProtocol)new JsonHubProtocol())
                     .Build();
                 _hubConnections.Add(hubConnection);
             }

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
+using Microsoft.AspNetCore.SignalR.Internal.Protocol;
 namespace MyChat
 {
     public class Startup
@@ -30,7 +30,12 @@ namespace MyChat
             {
                 logLevel = LogLevel.Information;
             }
-            services.AddSignalRService(hubOption => { hubOption.ConsoleLogLevel = logLevel; });
+            var protocolType = Configuration["SignalRService:ProtocolType"];
+            if (!Enum.TryParse<ProtocolType>(protocolType, true, out var protoType))
+            {
+                protoType = ProtocolType.Text;
+            }
+            services.AddSignalRService(hubOption => { hubOption.ConsoleLogLevel = logLevel; hubOption.ProtocolType = protoType; });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

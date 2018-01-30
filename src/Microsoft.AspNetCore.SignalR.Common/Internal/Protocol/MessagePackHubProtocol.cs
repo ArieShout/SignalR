@@ -19,18 +19,19 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private const int NonVoidResult = 3;
 
         private readonly SerializationContext _serializationContext;
-
+        private static bool _forService;
         public string Name => "messagepack";
 
         public ProtocolType Type => ProtocolType.Binary;
 
-        public MessagePackHubProtocol()
-            : this(CreateDefaultSerializationContext())
+        public MessagePackHubProtocol(bool forService = false)
+            : this(CreateDefaultSerializationContext(), forService)
         { }
 
-        public MessagePackHubProtocol(SerializationContext serializationContext)
+        public MessagePackHubProtocol(SerializationContext serializationContext, bool forService = false)
         {
             _serializationContext = serializationContext;
+            _forService = forService;
         }
 
         public bool TryParseMessages(ReadOnlySpan<byte> input, IInvocationBinder binder, out IList<HubMessage> messages)
@@ -79,18 +80,30 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         {
             var invocationId = ReadInvocationId(unpacker);
             var nonBlocking = ReadBoolean(unpacker, "nonBlocking");
-            var metadata = ReadMetedata(unpacker, "metaData");
+            IDictionary<string, string> metadata = null;
+            if (_forService)
+            {
+                metadata = ReadMetedata(unpacker, "metaData");
+            } 
             var target = ReadString(unpacker, "target");
             var parameterTypes = binder.GetParameterTypes(target);
 
             try
             {
                 var arguments = BindArguments(unpacker, parameterTypes);
-                return new InvocationMessage(invocationId, nonBlocking, target, argumentBindingException: null, arguments: arguments).AddMetadata(metadata);
+                if (_forService)
+                {
+                    return new InvocationMessage(invocationId, nonBlocking, target, argumentBindingException: null, arguments: arguments).AddMetadata(metadata);
+                }
+                return new InvocationMessage(invocationId, nonBlocking, target, argumentBindingException: null, arguments: arguments);
             }
             catch (Exception ex)
             {
-                return new InvocationMessage(invocationId, nonBlocking, target, ExceptionDispatchInfo.Capture(ex)).AddMetadata(metadata);
+                if (_forService)
+                {
+                    return new InvocationMessage(invocationId, nonBlocking, target, ExceptionDispatchInfo.Capture(ex)).AddMetadata(metadata);
+                }
+                return new InvocationMessage(invocationId, nonBlocking, target, ExceptionDispatchInfo.Capture(ex));
             }
         }
 
@@ -145,6 +158,11 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
         private static CompletionMessage CreateCompletionMessage(Unpacker unpacker, IInvocationBinder binder)
         {
             var invocationId = ReadInvocationId(unpacker);
+            IDictionary<string, string> metadata = null;
+            if (_forService)
+            {
+                metadata = ReadMetedata(unpacker, "metaData");
+            }
             var resultKind = ReadInt32(unpacker, "resultKind");
 
             string error = null;
@@ -167,7 +185,10 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                 default:
                     throw new FormatException("Invalid invocation result kind.");
             }
-
+            if (_forService)
+            {
+                return new CompletionMessage(invocationId, error, result, hasResult).AddMetadata(metadata);
+            }
             return new CompletionMessage(invocationId, error, result, hasResult);
         }
 
@@ -218,11 +239,21 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
 
         private void WriteInvocationMessage(InvocationMessage invocationMessage, Packer packer)
         {
-            packer.PackArrayHeader(6);
+            if (_forService)
+            {
+                packer.PackArrayHeader(6);
+            }
+            else
+            {
+                packer.PackArrayHeader(5);
+            }
             packer.Pack(HubProtocolConstants.InvocationMessageType);
             packer.PackString(invocationMessage.InvocationId);
             packer.Pack(invocationMessage.NonBlocking);
-            packer.PackDictionary<string, string>(invocationMessage.Metadata);
+            if (_forService)
+            {
+                packer.PackDictionary<string, string>(invocationMessage.Metadata);
+            }
             packer.PackString(invocationMessage.Target);
             packer.PackObject(invocationMessage.Arguments, _serializationContext);
         }
@@ -250,11 +281,20 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                 completionMessage.Error != null ? ErrorResult :
                 completionMessage.HasResult ? NonVoidResult :
                 VoidResult;
-
-            packer.PackArrayHeader(4 + (resultKind != VoidResult ? 1 : 0));
-
+            if (_forService)
+            {
+                packer.PackArrayHeader(4 + (resultKind != VoidResult ? 1 : 0));
+            }
+            else
+            {
+                packer.PackArrayHeader(3 + (resultKind != VoidResult ? 1 : 0));
+            }
             packer.Pack(HubProtocolConstants.CompletionMessageType);
             packer.PackString(completionMessage.InvocationId);
+            if (_forService)
+            {
+                packer.PackDictionary<string, string>(completionMessage.Metadata);
+            }
             packer.Pack(resultKind);
             switch (resultKind)
             {
@@ -265,7 +305,6 @@ namespace Microsoft.AspNetCore.SignalR.Internal.Protocol
                     packer.PackObject(completionMessage.Result, _serializationContext);
                     break;
             }
-            packer.PackDictionary<string, string>(completionMessage.Metadata);
         }
 
         private void WriteCancelInvocationMessage(CancelInvocationMessage cancelInvocationMessage, Packer packer)
