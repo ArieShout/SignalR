@@ -1,5 +1,4 @@
 ﻿using System.Configuration;
-using Microsoft.AspNetCore.SignalR.Owin;
 using Microsoft.Owin;
 using Owin;
 
@@ -13,7 +12,7 @@ namespace ServiceChatNetFxSample
         {
             // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=316888
             app.UseSignalRService(ConfigurationManager.AppSettings["SignalRService:ConnectionString"],
-                builder => { _ = builder.UseHub<Chat>().StartAsync(); });
+                builder => { builder.UseHub<Chat>(); });
         }
     }
 }

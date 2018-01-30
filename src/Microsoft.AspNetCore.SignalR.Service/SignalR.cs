@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
-using Microsoft.AspNetCore.SignalR.Internal;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.SignalR
@@ -97,21 +96,26 @@ namespace Microsoft.AspNetCore.SignalR
             );
         }
 
-        public ServiceClient<THub> CreateServiceClient<THub>() where THub : Hub
+        public HubServer<THub> CreateHubServer<THub>() where THub : Hub
         {
-            var serviceClient = ServiceProvider.GetRequiredService<ServiceClient<THub>>();
-            serviceClient.UseService(this);
-            return serviceClient;
+            var hubServer = ServiceProvider.GetRequiredService<HubServer<THub>>();
+            hubServer.UseService(this);
+            return hubServer;
         }
 
-        public IHubClients<IServiceClientProxy> CreateHubClientsProxy<THub>() where THub : Hub
+        public HubProxy CreateHubProxy<THub>() where THub : Hub
         {
-            return CreateHubClientsProxy(typeof(THub).Name.ToLower());
+            return CreateHubProxy(typeof(THub).Name.ToLower());
         }
 
-        public IHubClients<IServiceClientProxy> CreateHubClientsProxy(string hubName)
+        public HubProxy CreateHubProxy(string hubName)
         {
-            return new HubClientsProxy(this, hubName);
+            if (string.IsNullOrEmpty(hubName))
+            {
+                throw new ArgumentException(nameof(hubName));
+            }
+
+            return new HubProxy(this, hubName.ToLower());
         }
 
         #endregion
@@ -139,6 +143,10 @@ namespace Microsoft.AspNetCore.SignalR
                 : throw new ArgumentException($"Invalid connection string: {connectionString}");
         }
 
+        #endregion
+
+        #region Static Properties
+
         private static IServiceProvider _externalServiceProvider = null;
 
         private static readonly Lazy<IServiceProvider> InternalServiceProvider =
@@ -147,11 +155,10 @@ namespace Microsoft.AspNetCore.SignalR
                     .AddLogging()
                     .AddAuthorization()
                     .AddSingleton(typeof(HubLifetimeManager<>), typeof(ServiceHubLifetimeManager<>))
-                    .AddSingleton(typeof(IHubProtocolResolver), typeof(DefaultHubProtocolResolver))
                     .AddSingleton(typeof(IHubContext<>), typeof(HubContext<>))
                     .AddSingleton(typeof(IHubInvoker<>), typeof(ServiceHubInvoker<>))
                     .AddTransient(typeof(IHubActivator<>), typeof(DefaultHubActivator<>))
-                    .AddTransient(typeof(ServiceClient<>))
+                    .AddSingleton(typeof(HubServer<>))
                     .BuildServiceProvider());
 
         internal static IServiceProvider ServiceProvider

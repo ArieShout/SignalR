@@ -19,7 +19,7 @@ namespace Microsoft.AspNetCore.SignalR
 {
     public class ServiceConnection<THub> where THub : Hub
     {
-        public static readonly TimeSpan DefaultServerTimeout = TimeSpan.FromSeconds(30); // Server ping rate is 15 sec, this is 2 times that.
+        private static readonly TimeSpan DefaultServerTimeout = TimeSpan.FromSeconds(30); // Server ping rate is 15 sec, this is 2 times that.
         private const string OnConnectedAsyncMethod = "onconnectedasync";
         private const string OnDisconnectedAsyncMethod = "ondisconnectedasync";
 
@@ -41,7 +41,7 @@ namespace Microsoft.AspNetCore.SignalR
 
         //private int _nextId = 0;
         private volatile bool _startCalled;
-        private Timer _timeoutTimer;
+        private readonly Timer _timeoutTimer;
         private bool _needKeepAlive;
 
         public TimeSpan ServerTimeout { get; set; } = DefaultServerTimeout;

@@ -7,15 +7,15 @@ using static Microsoft.AspNetCore.SignalR.SignalR;
 
 namespace Microsoft.AspNetCore.Builder
 {
-    public static class ApplicationBuilderExtensions
+    public static class SignalRServiceApplicationBuilderExtensions
     {
-        public static IApplicationBuilder UseSignalRService(this IApplicationBuilder app, string connectionString, Action<ServiceClientBuilder> configure)
+        public static IApplicationBuilder UseSignalRService(this IApplicationBuilder app, string connectionString, Action<HubServerBuilder> configure)
         {
             // Assign only once
             ServiceProvider = app.ApplicationServices;
 
             var signalr = Parse(connectionString);
-            var builder = new ServiceClientBuilder(app.ApplicationServices, signalr);
+            var builder = new HubServerBuilder(app.ApplicationServices, signalr);
             configure(builder);
 
             return app;

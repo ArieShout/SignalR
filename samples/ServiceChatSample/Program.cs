@@ -17,7 +17,7 @@ namespace ServiceChatSample
                     factory.AddDebug();
                 })
                 .UseKestrel()
-                .UseUrls("http://*:5051/")
+                .UseUrls("http://*:5050/")
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseStartup<Startup>()
                 .Build()

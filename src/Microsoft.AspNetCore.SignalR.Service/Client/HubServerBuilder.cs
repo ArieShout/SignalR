@@ -6,22 +6,24 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.AspNetCore.SignalR
 {
-    public class ServiceClientBuilder
+    public class HubServerBuilder
     {
         private readonly SignalR _signalr;
         private readonly IServiceProvider _serviceProvider;
 
-        public ServiceClientBuilder(IServiceProvider serviceProvider, SignalR signalr)
+        public HubServerBuilder(IServiceProvider serviceProvider, SignalR signalr)
         {
             _serviceProvider = serviceProvider;
             _signalr = signalr;
         }
 
-        public ServiceClient<THub> UseHub<THub>() where THub: Hub
+        public HubServer<THub> UseHub<THub>() where THub: Hub
         {
-            var serviceClient = _serviceProvider.GetRequiredService<ServiceClient<THub>>();
-            serviceClient.UseService(_signalr);
-            return serviceClient;
+            var hubServer = _serviceProvider.GetRequiredService<HubServer<THub>>();
+            hubServer.UseService(_signalr);
+            // Automatically start hub server
+            _ = hubServer.StartAsync();
+            return hubServer;
         }
     }
 }

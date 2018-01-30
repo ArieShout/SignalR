@@ -39,10 +39,8 @@ namespace ServiceChatSample
         {
             app.UseMvc();
             app.UseFileServer();
-            app.UseSignalRService(Configuration["SignalRService:ConnectionString"], builder =>
-            {
-                _ = builder.UseHub<Chat>().StartAsync();
-            });
+            app.UseSignalRService(Configuration["SignalRService:ConnectionString"],
+                builder => { builder.UseHub<Chat>(); });
         }
     }
 }

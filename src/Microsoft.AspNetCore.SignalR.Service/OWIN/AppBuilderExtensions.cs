@@ -2,17 +2,17 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using Owin;
+using Microsoft.AspNetCore.SignalR;
 
-namespace Microsoft.AspNetCore.SignalR.Owin
+namespace Owin
 {
-    public static class AppBuilderExtensions
+    public static class SignalRServiceAppBuilderExtensions
     {
         public static IAppBuilder UseSignalRService(this IAppBuilder app, string connectionString,
-            Action<ServiceClientBuilder> configure)
+            Action<HubServerBuilder> configure)
         {
             var signalr = SignalR.Parse(connectionString);
-            var builder = new ServiceClientBuilder(SignalR.ServiceProvider, signalr);
+            var builder = new HubServerBuilder(SignalR.ServiceProvider, signalr);
             configure(builder);
 
             return app;

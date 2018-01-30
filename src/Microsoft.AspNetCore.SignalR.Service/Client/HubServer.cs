@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Sockets.Client.Http;
 
 namespace Microsoft.AspNetCore.SignalR
 {
-    public class ServiceClient<THub> where THub : Hub
+    public class HubServer<THub> where THub : Hub
     {
         private readonly List<ServiceConnection<THub>> _serviceConnections = new List<ServiceConnection<THub>>();
 
@@ -21,9 +21,9 @@ namespace Microsoft.AspNetCore.SignalR
         private readonly IHubInvoker<THub> _hubInvoker;
 
         private readonly ILoggerFactory _loggerFactory;
-        private readonly ILogger<ServiceClient<THub>> _logger;
+        private readonly ILogger<HubServer<THub>> _logger;
 
-        public ServiceClient(HubLifetimeManager<THub> lifetimeManager,
+        public HubServer(HubLifetimeManager<THub> lifetimeManager,
             IHubInvoker<THub> hubInvoker,
             ILoggerFactory loggerFactory)
         {
@@ -31,7 +31,7 @@ namespace Microsoft.AspNetCore.SignalR
             _hubInvoker = hubInvoker;
 
             _loggerFactory = loggerFactory;
-            _logger = loggerFactory.CreateLogger<ServiceClient<THub>>();
+            _logger = loggerFactory.CreateLogger<HubServer<THub>>();
         }
 
         internal void UseService(SignalR signalr)

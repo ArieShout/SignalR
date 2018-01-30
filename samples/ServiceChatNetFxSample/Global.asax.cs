@@ -8,7 +8,7 @@ namespace ServiceChatNetFxSample
 {
     public class WebApiApplication : System.Web.HttpApplication
     {
-        public static ServiceClient<Chat> ChatClient;
+        public static HubServer<Chat> ChatClient;
 
         protected void Application_Start()
         {

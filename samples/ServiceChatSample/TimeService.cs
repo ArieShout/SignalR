@@ -9,13 +9,13 @@ namespace ServiceChatSample
     public class TimeService
     {
         private readonly SignalR _signalr;
-        private readonly IHubClients<IServiceClientProxy> _hubClientProxy;
+        private readonly HubProxy _hubProxy;
         private readonly Timer _timer;
 
         public TimeService(SignalR signalr)
         {
             _signalr = signalr;
-            _hubClientProxy = _signalr.CreateHubClientsProxy<Chat>();
+            _hubProxy = _signalr.CreateHubProxy<Chat>();
             _timer = new Timer(Run, this, 100, 60 * 1000);
         }
 
@@ -26,7 +26,7 @@ namespace ServiceChatSample
 
         private async Task Broadcast()
         {
-            await _hubClientProxy.All.InvokeAsync("broadcastMessage",
+            await _hubProxy.All.InvokeAsync("broadcastMessage",
                 new object[]
                 {
                     "[Current UTC Time]",
