@@ -2,40 +2,31 @@
 <html>
 <head>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta name="viewport" content="width=device-width">
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
+    <link href="css/bootstrap.css" rel="stylesheet" />
+    <link href="css/site.css" rel="stylesheet" />
     <title>SignalR Service Simple Chat</title>
-    <style type="text/css">
-        #messages
-        {
-            width: 100%;
-            max-width: 500px;
-            border: 1px solid #ccc;
-            height: 400px;
-            float: none;
-            margin: 0px auto;
-            padding-left: 0px;
-            overflow-y: auto;
-        }
-
-        #messages li
-        {
-            list-style-type: none;
-            padding: 3px;
-        }
-    </style>
 </head>
-<body style="background-color: indigo">
-<h2 style="text-align: center;color: white">DevDiv China SignalR Service</h2>
-    <div class="container">
-        <ul id="messages" style="background-color: whitesmoke"></ul>
-        <div style="margin: 10px auto; width: 100%; max-width: 350px;">
-            <input style="width: calc(100% - 120px); font-size: 18px;" type="text" id="message" />
-            <input style="font-size: 15px;" type="button" id="sendmessage" value="Send" />
-            <input style="font-size: 15px;" type="button" id="echo" value="Echo" />
+<body>
+    <h2 class="text-center" style="margin-top: 0; padding-top: 30px; padding-bottom: 30px;">Azure SignalR Service</h2>
+    <div class="container" style="height: calc(100% - 110px);">
+        <div id="messages" style="background-color: whitesmoke; "></div>
+        <div style="width: 100%; border-left-style: ridge; border-right-style: ridge;">
+            <textarea id="message"
+                      style="width: 100%; padding: 5px 10px; border-style: hidden;" 
+                      placeholder="Type message and press Enter to send..."></textarea>
+        </div>
+        <div style="overflow: auto; border-style: ridge; border-top-style: hidden;">
+            <button class="btn-warning pull-right" id="echo">Echo</button>
+            <button class="btn-success pull-right" id="sendmessage">Send</button>
         </div>
     </div>
     <!--Script references. -->
+    <script type="text/javascript" src="scripts/jquery-1.10.2.js"></script>
+    <script type="text/javascript" src="scripts/bootstrap.js"></script>
+
     <!--Reference the SignalR library. -->
     <script>
         if (typeof Promise === 'undefined') {
@@ -52,7 +43,7 @@
             var messageInput = document.getElementById('message');
 
             // Get the user name and store it to prepend to messages.
-            var name = prompt('Enter your name:', '');
+            var username = prompt('Enter your name:', '');
             // Set initial focus to message input box.
             messageInput.focus();
 
@@ -89,8 +80,21 @@
                                 var encodedName = name;
                                 var encodedMsg = message;
                                 // Add the message to the page.
-                                var liElement = document.createElement('li');
-                                liElement.innerHTML = '<strong>' + encodedName + '</strong>:&nbsp;&nbsp;' + encodedMsg;
+                                var liElement = document.createElement('div');
+                                liElement.classList.add("message-entry");
+                                if (encodedName === "[SYSTEM]") {
+                                    liElement.innerHTML = encodedMsg;
+                                    liElement.classList.add("text-center");
+                                    liElement.classList.add("system-message");
+                                    liElement.style = "background: #87CEFA;";
+                                } else if (encodedName === username) {
+                                    liElement.innerHTML = '<div class="message-avatar pull-right">' + encodedName + '</div>' +
+                                        '<div class="message-content pull-right">' + encodedMsg + '<div>';
+
+                                } else {
+                                    liElement.innerHTML = '<div class="message-avatar pull-left">' + encodedName + '</div>' +
+                                        '<div class="message-content pull-left">' + encodedMsg + '<div>';
+                                }
                                 var messageBox = document.getElementById('messages');
                                 messageBox.appendChild(liElement);
                                 messageBox.scrollTop = messageBox.scrollHeight;
@@ -102,25 +106,26 @@
                 })
                 .then(function (connection) {
                     console.log('connection started');
-                    connection.invoke('broadcastMessage', '[SYSTEM]', '----- ' + name + ' joined -----');
+                    connection.invoke('broadcastMessage', '[SYSTEM]', username + ' JOINED');
                     document.getElementById('sendmessage').addEventListener('click', function (event) {
                         // Call the broadcastMessage method on the hub.
-                        connection.invoke('broadcastMessage', name, messageInput.value);
+                        connection.invoke('broadcastMessage', username, messageInput.value);
 
                         // Clear text box and reset focus for next comment.
                         messageInput.value = '';
                         messageInput.focus();
                         event.preventDefault();
                     });
-                    document.getElementById('message').addEventListener('keypress', function (args) {
-                        if (args.keyCode === 13) {
+                    document.getElementById('message').addEventListener('keypress', function (event) {
+                        if (event.keyCode === 13) {
+                            event.preventDefault();
                             document.getElementById('sendmessage').click();
                             return false;
                         }
                     });
                     document.getElementById('echo').addEventListener('click', function (event) {
                         // Call the echo method on the hub.
-                        connection.invoke('echo', name, messageInput.value);
+                        connection.invoke('echo', username, messageInput.value);
 
                         // Clear text box and reset focus for next comment.
                         messageInput.value = '';
@@ -139,7 +144,7 @@
             function startConnection(url, configureConnection) {
                 return function start(transport) {
                     console.log(`Starting connection using ${signalR.TransportType[transport]} transport`);
-                    var connection = new signalR.HubConnection(url, { transport: transport, uid: name, accessToken: () => accessToken });
+                    var connection = new signalR.HubConnection(url, { transport: transport, uid: username, accessToken: () => accessToken });
                     if (configureConnection && typeof configureConnection === 'function') {
                         configureConnection(connection);
                     }

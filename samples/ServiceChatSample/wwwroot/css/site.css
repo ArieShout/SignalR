@@ -1,4 +1,14 @@
-﻿html, body {
+﻿/*html, body {
+    font-size: 16px;
+}
+
+@media all and (max-device-width: 720px) {
+    html, body {
+        font-size: 20px;
+    }
+}*/
+
+html, body {
     padding: 0;
     height: 100%;
 }
@@ -6,7 +16,7 @@
 #messages {
     width: 100%;
     border: 1px solid #ccc;
-    height: calc(100% - 80px);
+    height: calc(100% - 120px);
     float: none;
     margin: 0px auto;
     padding-left: 0px;
@@ -41,24 +51,25 @@ textarea:focus {
     max-width: calc(60%);
     word-wrap: break-word;
 }
+
     .message-content.pull-left:before {
         width: 0;
         height: 0;
-        float: left;
         display: inline-block;
-        border-top: 5px solid transparent;
-        border-bottom: 5px solid transparent;
-        border-right: 5px solid #b2e281;
+        float: left;
+        border-top: 10px solid transparent;
+        border-bottom: 10px solid transparent;
+        border-right: 10px solid #b2e281;
         margin: 15px 0;
     }
 
     .message-content.pull-right:after {
         width: 0;
         height: 0;
-        float: right;
         display: inline-block;
-        border-top: 5px solid transparent;
-        border-bottom: 5px solid transparent;
-        border-left: 5px solid #b2e281;
+        float: right;
+        border-top: 10px solid transparent;
+        border-bottom: 10px solid transparent;
+        border-left: 10px solid #b2e281;
         margin: 15px 0;
     }
