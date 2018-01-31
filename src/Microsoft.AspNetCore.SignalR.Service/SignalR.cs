@@ -52,7 +52,7 @@ namespace Microsoft.AspNetCore.SignalR
         public string GetClientUrl(string hubName)
         {
             // TODO: Use HTTPS
-            return $"http://{HostName}/client/?hub={hubName}";
+            return $"http://{HostName}/client/{hubName}";
         }
 
         public string GetServerUrl<THub>() where THub : Hub
@@ -63,7 +63,7 @@ namespace Microsoft.AspNetCore.SignalR
         public string GetServerUrl(string hubName)
         {
             // TODO: Use HTTPS
-            return $"http://{HostName}/server/?hub={hubName}";
+            return $"http://{HostName}/server/{hubName}";
         }
 
         public string GenerateClientToken<THub>(IEnumerable<Claim> claims = null) where THub : Hub
@@ -74,7 +74,7 @@ namespace Microsoft.AspNetCore.SignalR
         public string GenerateClientToken(string hubName, IEnumerable<Claim> claims = null)
         {
             return AuthenticationHelper.GenerateJwtBearer(
-                audience: $"{HostName}/client/?hub={hubName}",
+                audience: $"{HostName}/client/",
                 claims: claims,
                 expires: DateTime.UtcNow.Add(JwtBearerLifetime),
                 signingKey: AccessKey
@@ -89,7 +89,7 @@ namespace Microsoft.AspNetCore.SignalR
         public string GenerateServerToken(string hubName)
         {
             return AuthenticationHelper.GenerateJwtBearer(
-                audience: $"{HostName}/server/?hub={hubName}",
+                audience: $"{HostName}/server/",
                 claims: null,
                 expires: DateTime.UtcNow.Add(JwtBearerLifetime),
                 signingKey: AccessKey

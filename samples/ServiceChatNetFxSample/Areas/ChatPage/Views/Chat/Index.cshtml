@@ -68,7 +68,7 @@
         getAccessToken('/signalr-auth/chat')
             .then(function (token) {
                 accessToken = token;
-                return startConnection('http://localhost:5001/client/?hub=chat',
+                return startConnection('http://dev0131a.eastus.cloudapp.azure.com:5001/client/chat/',
                     function (connection) {
                         var messageCallback = function (name, message) {
                             // Html encode display name and message.
