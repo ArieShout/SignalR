@@ -12,12 +12,12 @@ namespace MyChat
         public static void Main(string[] args)
         {
             var host = new WebHostBuilder()
-                .ConfigureLogging((context, factory) =>
-                {
-                    factory.AddConfiguration(context.Configuration.GetSection("Logging"));
-                    factory.AddConsole();
-                    factory.AddDebug();
-                })
+                //.ConfigureLogging((context, factory) =>
+                //{
+                //    factory.AddConfiguration(context.Configuration.GetSection("Logging"));
+                //    factory.AddConsole();
+                //    //factory.AddDebug();
+                //})
                 .UseKestrel()
                 .UseUrls("http://*:5050")
                 .UseContentRoot(Directory.GetCurrentDirectory())

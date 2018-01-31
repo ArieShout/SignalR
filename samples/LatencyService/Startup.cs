@@ -37,23 +37,24 @@ namespace Latency
                 protoType = ProtocolType.Text;
             }
             var messageType = Configuration["SignalRService:MessagePassingType"];
-            if (!Enum.TryParse<MessagePassingType>(messageType, true ,out var msgType))
+            if (!Enum.TryParse<MessagePassingType>(messageType, true, out var msgType))
             {
                 msgType = MessagePassingType.AsyncCall;
             }
-            services.AddSignalRService(hubOption => {
-            hubOption.ConsoleLogLevel = logLevel;
-            hubOption.ConnectionNumber = Configuration.GetValue<int>("SignalRService:ServiceConnectionNo");
-            hubOption.ProtocolType = protoType;
-            hubOption.MessagePassingType = msgType;
-            hubOption.DontSendComplete = Configuration["SignalRService:DontSendComplete"] != null ?
-                bool.TryParse(Configuration["SignalRService:DontSendComplete"], out var d) && d : false;
-            hubOption.ReceiveBufferSize = Configuration.GetValue<int>("SignalRService:ReceiveBufferSize");
-            hubOption.SendBufferSize = Configuration.GetValue<int>("SignalRService:SendBufferSize");
-            hubOption.EnableMetrics = Configuration["SignalRService:EnableMetrics"] != null ?
-                bool.TryParse(Configuration["SignalRService:EnableMetrics"], out var value) && value : false;
-            hubOption.EchoAll4TroubleShooting = Configuration["SignalRService:EchoAll4TroubleShooting"] != null ?
-                bool.TryParse(Configuration["SignalRService:EchoAll4TroubleShooting"], out var v) && v : false;
+            services.AddSignalRService(hubOption =>
+            {
+                hubOption.ConsoleLogLevel = logLevel;
+                hubOption.ConnectionNumber = Configuration.GetValue<int>("SignalRService:ServiceConnectionNo");
+                hubOption.ProtocolType = protoType;
+                hubOption.MessagePassingType = msgType;
+                hubOption.DontSendComplete = Configuration["SignalRService:DontSendComplete"] != null ?
+                    bool.TryParse(Configuration["SignalRService:DontSendComplete"], out var d) && d : false;
+                hubOption.ReceiveBufferSize = Configuration.GetValue<int>("SignalRService:ReceiveBufferSize");
+                hubOption.SendBufferSize = Configuration.GetValue<int>("SignalRService:SendBufferSize");
+                hubOption.EnableMetrics = Configuration["SignalRService:EnableMetrics"] != null ?
+                    bool.TryParse(Configuration["SignalRService:EnableMetrics"], out var value) && value : false;
+                hubOption.EchoAll4TroubleShooting = Configuration["SignalRService:EchoAll4TroubleShooting"] != null ?
+                    bool.TryParse(Configuration["SignalRService:EchoAll4TroubleShooting"], out var v) && v : false;
             });
             var latencyOption = new LatencyOption();
             latencyOption.ConcurrentClientCount = Configuration.GetValue<int>("SignalRService:ConcurrentClientCount");

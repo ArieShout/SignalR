@@ -11,7 +11,7 @@ namespace MyChat
 
         public void echo(string name, string message)
         {
-            Clients.Client(Context.ConnectionId).InvokeAsync("echo", name, message + " (echo from server)");
+            Clients.Client(Context.ConnectionId).InvokeAsync("echo", name, message);
         }
     }
 }
